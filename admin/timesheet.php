@@ -14,10 +14,19 @@ if (!isset($_SESSION['a_id'])) {
 // Get the selected month and year from the request (default to current month and year)
 $selectedMonth = isset($_GET['month']) ? $_GET['month'] : date('m');
 $selectedYear = isset($_GET['year']) ? $_GET['year'] : date('Y');
+$searchName = isset($_GET['search_name']) ? $_GET['search_name'] : '';
+
+// Pagination settings
+$entriesPerPage = 10;
+$currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($currentPage < 1) $currentPage = 1;
 
 // Fetch all employees from the employee_register table
 $employeeQuery = "SELECT e_id, CONCAT(firstname, ' ', lastname) AS name 
                   FROM employee_register";
+if (!empty($searchName)) {
+    $employeeQuery .= " WHERE CONCAT(firstname, ' ', lastname) LIKE '%" . $searchName . "%'";
+}
 $employeeResult = $conn->query($employeeQuery);
 $employees = [];
 while ($row = $employeeResult->fetch_assoc()) {
@@ -125,14 +134,13 @@ for ($day = 1; $day <= $numberOfDays; $day++) {
 // Merge attendance logs with all dates for each employee
 $employeeAttendance = [];
 foreach ($allDatesInMonth as $dateStr => $dateInfo) {
-    $employeeAttendance[$dateStr] = [];
     foreach ($employees as $e_id => $name) {
         if (isset($attendanceLogs[$dateStr][$e_id])) {
             // Use the attendance log if it exists
-            $employeeAttendance[$dateStr][$e_id] = $attendanceLogs[$dateStr][$e_id];
+            $employeeAttendance[] = array_merge($attendanceLogs[$dateStr][$e_id], ['name' => $name]);
         } elseif (isset($leaveRequests[$dateStr][$e_id])) {
             // Use leave request if it exists
-            $employeeAttendance[$dateStr][$e_id] = [
+            $employeeAttendance[] = [
                 'e_id' => $e_id,
                 'name' => $name,
                 'attendance_date' => $dateStr,
@@ -143,7 +151,7 @@ foreach ($allDatesInMonth as $dateStr => $dateInfo) {
             ];
         } else {
             // Mark as absent if no attendance or leave record exists
-            $employeeAttendance[$dateStr][$e_id] = [
+            $employeeAttendance[] = [
                 'e_id' => $e_id,
                 'name' => $name,
                 'attendance_date' => $dateStr,
@@ -155,8 +163,34 @@ foreach ($allDatesInMonth as $dateStr => $dateInfo) {
         }
     }
 }
-?>
 
+// Filter by employee name if search is provided
+if (!empty($searchName)) {
+    $employeeAttendance = array_filter($employeeAttendance, function($record) use ($searchName) {
+        return stripos($record['name'], $searchName) !== false;
+    });
+    // Re-index array after filtering
+    $employeeAttendance = array_values($employeeAttendance);
+}
+
+// Sort by date (newest first) and then by employee name
+usort($employeeAttendance, function($a, $b) {
+    $dateCompare = strcmp($b['attendance_date'], $a['attendance_date']);
+    if ($dateCompare === 0) {
+        return strcmp($a['name'], $b['name']);
+    }
+    return $dateCompare;
+});
+
+// Calculate pagination
+$totalRecords = count($employeeAttendance);
+$totalPages = ceil($totalRecords / $entriesPerPage);
+if ($currentPage > $totalPages && $totalPages > 0) $currentPage = $totalPages;
+
+// Get the records for the current page
+$startIndex = ($currentPage - 1) * $entriesPerPage;
+$paginatedRecords = array_slice($employeeAttendance, $startIndex, $entriesPerPage);
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -165,168 +199,473 @@ foreach ($allDatesInMonth as $dateStr => $dateInfo) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Timesheet</title>
     <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="../css/styles.css" rel="stylesheet">
     <style>
-        /* Custom Dark Theme Styles */
+        :root {
+            --dark-bg: #121212;
+            --darker-bg: #0a0a0a;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --text-primary: #ffffff;
+            --text-secondary: #e0e0e0;
+            --accent-color: #8c8c8c;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --primary-color: #0d6efd;
+        }
+
         body {
-            background-color: #121212; /* Dark background */
-            color: #ffffff; /* Light text */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
         }
 
-        .badge {
-            font-size: 14px;
-            padding: 5px 10px;
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        .month-selector {
-            margin-bottom: 20px;
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        th, td {
-            text-align: center;
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
         }
 
-        /* Dark Table Styles */
-        .table-dark {
-            background-color: #343a40; /* Dark table header */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
         }
 
-        .table-bordered {
-            border-color: white; /* Dark border color */
+        .card-header {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            font-weight: 600;
+            color: var(--text-primary);
         }
 
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: gray; /* Darker row for striped effect */
+        .card-body {
+            padding: 20px;
         }
 
-        .table-striped tbody tr:nth-of-type(even) {
-            background-color: #2d2d2d; /* Lighter row for striped effect */
+        .form-control, .form-select {
+            background-color: #2d2d2d;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 15px;
         }
 
-        .table-hover tbody tr:hover {
-            background-color: #3e3e3e; /* Hover effect */
+        .form-control:focus, .form-select:focus {
+            background-color: #3d3d3d;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            color: var(--text-primary);
         }
 
-        .form-control {
-            background-color: #2d2d2d; /* Dark input background */
-            color: #ffffff; /* Light text */
-            border-color: #454d55; /* Dark border */
+        /* Make sure select option text is visible */
+        .form-select option {
+            background-color: #2d2d2d;
+            color: var(--text-primary);
         }
 
-        .form-control:focus {
-            background-color: #3e3e3e; /* Darker input background on focus */
-            color: #ffffff; /* Light text */
-            border-color: #555; /* Darker border on focus */
+        .btn {
+            border-radius: 6px;
+            padding: 10px 15px;
+            font-weight: 500;
+            color: var(--text-primary);
         }
 
         .btn-primary {
-            background-color: #0d6efd; /* Bootstrap primary color */
-            border-color: #0d6efd;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
         }
 
         .btn-primary:hover {
-            background-color: #0b5ed7; /* Darker primary color on hover */
-            border-color: #0b5ed7;
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
+
+        .btn-outline-light {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+
+        .btn-outline-light:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .table {
+            border-radius: 8px;
+            overflow: hidden;
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .table th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .table tbody tr {
+            background-color: var(--card-bg);
+        }
+
+        /* Alternating row colors for better readability */
+        .table tbody tr:nth-child(odd) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .badge {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 10px;
+            border-radius: 6px;
+            color: white; /* Ensure all badge text is white */
+        }
+
+        .badge-present {
+            background-color: var(--success-color);
+        }
+
+        .badge-late {
+            background-color: var(--warning-color);
+            color: #212529; /* Dark text for better visibility on yellow */
+        }
+
+        .badge-overtime {
+            background-color: var(--primary-color);
+        }
+
+        .badge-holiday, .badge-leave, .badge-absent {
+            background-color: var(--danger-color);
+        }
+
+        .badge-dayoff {
+            background-color: var(--accent-color);
+        }
+
+        .badge-norecord {
+            background-color: #6c757d;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Ensure all text is white */
+        .text-secondary {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Pagination styling */
+        .pagination {
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .pagination .page-item .page-link {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            background-color: var(--card-bg);
+            color: var(--accent-color);
+            border-color: var(--border-color);
+        }
+
+        .pagination-info {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+
+        /* Custom scrollbar - simplified */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
-<div class="container mt-5">
-    <h2 class="mb-4">Admin Timesheet</h2>
-
-    <!-- Month and Year Selector -->
-    <form method="GET" class="month-selector">
-        <div class="row justify-content-end"> <!-- Add justify-content-end to align the row to the right -->
-            <div class="col-md-3">
-                <label for="month">Select Month:</label>
-                <select name="month" id="month" class="form-control">
-                    <?php for ($i = 1; $i <= 12; $i++): ?>
-                        <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
-                            <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
-                        </option>
-                    <?php endfor; ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="year">Select Year:</label>
-                <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary mt-4" aria-label="Filter timesheet">Filter</button>
+    <div class="dashboard-container">
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-calendar-check me-2"></i>Admin Timesheet
+            </h1>
+            <div class="d-flex align-items-center">
+                <span class="text-secondary me-3">
+                    <i class="fas fa-clock me-1"></i>
+                    <?php echo date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear)); ?>
+                </span>
             </div>
         </div>
-    </form>
 
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-filter me-2"></i>Filter Options
+            </div>
+            <div class="card-body">
+                <form method="GET" class="month-selector">
+                    <div class="row align-items-end">
+                        <div class="col-md-3">
+                            <div class="mb-3 mb-md-0">
+                                <label for="month" class="filter-label">Select Month</label>
+                                <select name="month" id="month" class="form-select">
+                                    <?php for ($i = 1; $i <= 12; $i++): ?>
+                                        <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
+                                            <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3 mb-md-0">
+                                <label for="year" class="filter-label">Select Year</label>
+                                <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3 mb-md-0">
+                                <label for="search_name" class="filter-label">Search Employee</label>
+                                <input type="text" name="search_name" id="search_name" class="form-control" value="<?php echo htmlspecialchars($searchName); ?>" placeholder="Enter name...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Preserve pagination when filtering -->
+                    <input type="hidden" name="page" value="1">
+                </form>
+            </div>
+        </div>
 
-    <table id="timesheet" class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>Date</th>
-                <th>Employee</th>
-                <th>Time-In</th>
-                <th>Time-Out</th>
-                <th>Total Hours</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($employeeAttendance)): ?>
-                <tr>
-                    <td colspan="6" class="text-center">No data available for the selected month and year.</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($employeeAttendance as $dateStr => $logs): ?>
-                    <?php foreach ($logs as $e_id => $log): ?>
-                        <tr>
-                            <td><?php echo date('F j, Y', strtotime($log['attendance_date'])); ?></td>
-                            <td><?php echo $log['name']; ?></td>
-                            <td><?php echo $log['time_in']; ?></td>
-                            <td><?php echo $log['time_out']; ?></td>
-                            <td><?php echo $log['total_hours']; ?></td>
-                            <td>
-                                <?php
-                                // Set badge color based on status
-                                $statusClass = '';
-                                switch ($log['status']) {
-                                    case 'Present':
-                                        $statusClass = 'bg-success';
-                                        break;
-                                    case 'Late':
-                                        $statusClass = 'bg-warning text-dark';
-                                        break;
-                                    case 'Overtime':
-                                        $statusClass = 'bg-primary';
-                                        break;
-                                    case 'Holiday':
-                                        $statusClass = 'bg-danger';
-                                        break;
-                                    case 'Leave':
-                                        $statusClass = 'bg-danger';
-                                        break;
-                                    case 'Day Off':
-                                        $statusClass = 'bg-secondary';
-                                        break;
-                                    case 'Absent':
-                                        $statusClass = 'bg-danger';
-                                        break;
-                                    case 'No Record':
-                                        $statusClass = 'bg-light text-dark';
-                                        break;
-                                    default:
-                                        $statusClass = 'bg-light text-dark';
-                                        break;
-                                }
-                                ?>
-                                <span class="badge <?php echo $statusClass; ?>"><?php echo $log['status']; ?></span>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-table me-2"></i>Attendance Records
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-light" onclick="exportToCSV()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="timesheet" class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Employee</th>
+                                <th>Time-In</th>
+                                <th>Time-Out</th>
+                                <th>Total Hours</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($paginatedRecords)): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center">No data available for the selected criteria.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($paginatedRecords as $record): ?>
+                                    <tr>
+                                        <td><?php echo date('F j, Y', strtotime($record['attendance_date'])); ?></td>
+                                        <td><?php echo $record['name']; ?></td>
+                                        <td><?php echo $record['time_in']; ?></td>
+                                        <td><?php echo $record['time_out']; ?></td>
+                                        <td><?php echo isset($record['total_hours']) ? $record['total_hours'] : 'N/A'; ?></td>
+                                        <td>
+                                            <?php
+                                            // Set badge class based on status
+                                            $statusClass = '';
+                                            $status = $record['status'];
+                                            
+                                            if (strpos($status, 'Present') !== false) {
+                                                $statusClass = 'badge-present';
+                                            } elseif (strpos($status, 'Late') !== false) {
+                                                $statusClass = 'badge-late';
+                                            } elseif (strpos($status, 'Overtime') !== false) {
+                                                $statusClass = 'badge-overtime';
+                                            } elseif (strpos($status, 'Holiday') !== false) {
+                                                $statusClass = 'badge-holiday';
+                                            } elseif (strpos($status, 'Leave') !== false) {
+                                                $statusClass = 'badge-leave';
+                                            } elseif (strpos($status, 'Day Off') !== false) {
+                                                $statusClass = 'badge-dayoff';
+                                            } elseif (strpos($status, 'Absent') !== false) {
+                                                $statusClass = 'badge-absent';
+                                            } elseif (strpos($status, 'No Record') !== false) {
+                                                $statusClass = 'badge-norecord';
+                                            }
+                                            ?>
+                                            <span class="badge <?php echo $statusClass; ?>"><?php echo $status; ?></span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="pagination-info">
+                    Showing <?php echo min($startIndex + 1, $totalRecords); ?> to <?php echo min($startIndex + $entriesPerPage, $totalRecords); ?> of <?php echo $totalRecords; ?> entries
+                </div>
+                
+                <?php if ($totalPages > 1): ?>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <!-- Previous button -->
+                        <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        
+                        <!-- Page numbers -->
+                        <?php
+                        $startPage = max(1, $currentPage - 2);
+                        $endPage = min($totalPages, $startPage + 4);
+                        if ($endPage - $startPage < 4 && $totalPages > 5) {
+                            $startPage = max(1, $endPage - 4);
+                        }
+                        
+                        for ($i = $startPage; $i <= $endPage; $i++): 
+                        ?>
+                            <li class="page-item <?php echo ($i == $currentPage) ? 'active' : ''; ?>">
+                                <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        
+                        <!-- Next button -->
+                        <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage + 1; ?>" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Function to export table data to CSV
+        function exportToCSV() {
+            const table = document.getElementById('timesheet');
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = [], cols = rows[i].querySelectorAll('td, th');
+                
+                for (let j = 0; j < cols.length; j++) {
+                    // Get the text content and replace any commas with spaces to avoid CSV issues
+                    let data = cols[j].textContent.replace(/,/g, ' ');
+                    // Remove any double quotes to avoid CSV issues
+                    data = data.replace(/"/g, '');
+                    // Wrap the data in double quotes
+                    row.push('"' + data + '"');
+                }
+                
+                csv.push(row.join(','));
+            }
+            
+            // Create a CSV file and download it
+            const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
+            const downloadLink = document.createElement('a');
+            
+            // Create a download link
+            downloadLink.download = 'timesheet_' + new Date().toISOString().slice(0, 10) + '.csv';
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = 'none';
+            
+            // Add the link to the DOM and trigger the download
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
 </body>
 </html>

@@ -1,9 +1,26 @@
 <?php
+// Assume $conn is already established in db_conn.php
 include '../../db/db_conn.php'; // Include database connection
 
-// Fetch all employees
-$query = "SELECT * FROM employee_register";
-$result = $conn->query($query);
+// Number of records to show per page
+$recordsPerPage = 10;
+
+// Get the current page or set a default
+$currentPage = isset($_GET['page']) ? $_GET['page'] : 1;
+$offset = ($currentPage - 1) * $recordsPerPage;
+
+// Fetch total number of employees for pagination
+$totalQuery = "SELECT COUNT(*) as total FROM employee_register";
+$totalResult = $conn->query($totalQuery);
+$totalEmployees = $totalResult->fetch_assoc()['total'];
+$totalPages = ceil($totalEmployees / $recordsPerPage);
+
+// Fetch all employees with pagination
+$query = "SELECT * FROM employee_register LIMIT ? OFFSET ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param('ii', $recordsPerPage, $offset);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -12,227 +29,631 @@ $result = $conn->query($query);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Schedule</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
     <style>
+        :root {
+            --dark-bg: #121212;
+            --darker-bg: #0a0a0a;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --accent-color: #8c8c8c;
+            --primary-color: #6c757d;
+            --primary-hover: #5a6268;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+
         body {
-            background-color: #1a1a1a; /* Dark background for the entire page */
-            color: #ffffff; /* White text color for better contrast */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
             margin: 0;
-            padding: 20px;
+            color: var(--text-primary);
         }
 
-        h1 {
-            text-align: center;
-            color: #4CAF50; /* Green color for the heading */
-            margin-bottom: 20px;
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            overflow: hidden;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #2d2d2d; /* Dark background for the table */
-            color: #ffffff; /* White text color for table content */
-            border-radius: 10px; /* Rounded corners for the table */
-            overflow: hidden; /* Ensures rounded corners are visible */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+        .card-header {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            font-weight: 600;
         }
 
-        table, th, td {
-            border: 1px solid #444; /* Darker border color */
+        .table {
+            margin-bottom: 0;
+            color: #ffffff;
         }
 
-        th, td {
-            padding: 12px;
-            text-align: center;
+        .table th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            padding: 15px;
+            border-color: var(--border-color);
         }
 
-        th {
-            background: linear-gradient(135deg, #4CAF50, #45a049); /* Gradient background for headers */
-            color: white; /* White text color for table headers */
-            font-weight: bold;
+        .table td {
+            padding: 15px;
+            vertical-align: middle;
+            border-color: var(--border-color);
         }
 
-        td {
-            background-color: #3d3d3d; /* Slightly lighter dark background for table cells */
+        .table tbody tr {
+            background-color: var(--card-bg);
         }
 
-        tr:hover {
-            background-color: #4CAF50; /* Green hover effect for rows */
-            color: white; /* White text on hover */
-            transition: background-color 0.3s ease; /* Smooth transition */
+        .table tbody tr:nth-child(odd) {
+            background-color: rgba(255, 255, 255, 0.02);
         }
 
-        .edit-btn {
-            background-color: #4CAF50;
+        .badge {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+
+        .badge-day {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .badge-night {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .btn-edit {
+            background-color: var(--primary-color);
             color: white;
             border: none;
             padding: 8px 16px;
-            cursor: pointer;
-            border-radius: 4px; /* Rounded corners for the button */
+            border-radius: 6px;
             font-size: 14px;
-            transition: background-color 0.3s ease; /* Smooth hover transition */
+            transition: all 0.2s ease;
         }
 
-        .edit-btn:hover {
-            background-color: #45a049; /* Darker green on hover */
+        .btn-edit:hover {
+            background-color: var(--primary-hover);
+            color: white;
         }
 
         /* Modal styling */
-        #editModal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #2d2d2d; /* Dark background for the modal */
-            padding: 30px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
-            color: #ffffff; /* White text color for modal content */
-            border-radius: 10px; /* Rounded corners for the modal */
-            width: 400px; /* Increased width */
-            max-width: 90%; /* Ensure it doesn't overflow on small screens */
+        .modal-content {
+            background-color: var(--card-bg);
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
         }
 
-        #editModal h2 {
-            margin-top: 0;
-            font-size: 24px;
-            text-align: center;
-            color: #4CAF50; /* Green color for modal heading */
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px;
         }
 
-        #editModal label {
-            display: block;
+        .modal-title {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 20px;
+        }
+
+        .form-label {
+            color: #ffffff;
+            font-weight: 500;
             margin-bottom: 8px;
-            font-weight: bold;
-            color: #ffffff; /* White text color for labels */
         }
 
-        #editModal input, #editModal select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 15px;
-            background-color: #3d3d3d; /* Dark background for input fields */
-            color: #ffffff; /* White text color for input fields */
-            border: 1px solid #444; /* Darker border color */
-            border-radius: 4px; /* Rounded corners for input fields */
+        .form-control, .form-select {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 15px;
         }
 
-        #editModal button {
-            width: 48%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px; /* Rounded corners for buttons */
-            font-size: 16px;
-            transition: background-color 0.3s ease; /* Smooth hover transition */
+        .form-control:focus, .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25);
         }
 
-        #editModal button:hover {
-            background-color: #45a049; /* Darker green on hover */
+        .form-select option {
+            background-color: var(--card-bg);
+            color: #ffffff;
         }
 
-        #editModal button[type="button"] {
-            background-color: #666; /* Gray color for the Cancel button */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
-        #editModal button[type="button"]:hover {
-            background-color: #555; /* Darker gray on hover */
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
         }
-        table, th, td {
-    border: 1px solid black; /* Black border for the table */
-}
+
+        .btn-secondary {
+            background-color: #343a40;
+            border-color: #343a40;
+        }
+
+        .btn-secondary:hover {
+            background-color: #23272b;
+            border-color: #23272b;
+        }
+
+        .btn-close {
+            color: #ffffff;
+            opacity: 0.8;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 18px;
+            margin-bottom: 0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .table-responsive {
+                border-radius: 10px;
+                overflow: hidden;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--card-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+          /* Change the placeholder color to white */
+    #searchInput::placeholder {
+        color: white;
+        opacity: 1; /* Ensure full visibility */
+    }
+
+    /* Optional: Ensure the input text color is also white */
+    #searchInput {
+        color: white;
+    }
+
+    /* Add styles for pagination */
+    .pagination {
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .pagination .page-item .page-link {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: var(--text-secondary);
+        pointer-events: none;
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+    }
     </style>
 </head>
 <body>
-    <h1>Employee Schedule</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Shift Type</th>
-                <th>Schedule Date</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if ($result->num_rows > 0): ?>
-                <?php while ($employee = $result->fetch_assoc()): ?>
-                    <?php
-                    // Fetch the employee's schedule
-                    $scheduleQuery = "SELECT * FROM employee_schedule WHERE employee_id = ? ORDER BY schedule_date DESC LIMIT 1";
-                    $stmt = $conn->prepare($scheduleQuery);
-                    $stmt->bind_param('i', $employee['e_id']);
-                    $stmt->execute();
-                    $scheduleResult = $stmt->get_result();
-                    $schedule = $scheduleResult->fetch_assoc();
-                    $stmt->close();
-                    ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($employee['e_id']); ?></td>
-                        <td><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></td>
-                        <td><?php echo htmlspecialchars($schedule['shift_type'] ?? 'N/A'); ?></td>
-                        <td><?php echo htmlspecialchars($schedule['schedule_date'] ?? 'N/A'); ?></td>
-                        <td><?php echo htmlspecialchars($schedule['start_time'] ?? 'N/A'); ?></td>
-                        <td><?php echo htmlspecialchars($schedule['end_time'] ?? 'N/A'); ?></td>
-                        <td>
-                            <button class="edit-btn" onclick="openEditModal(<?php echo $employee['e_id']; ?>)">Edit Schedule</button>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="7">No employees found.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
+    <div class="page-container">
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-calendar-alt me-2"></i>Employee Schedule
+            </h1>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkEditModal">
+                    <i class="fas fa-users me-2"></i>Bulk Edit Schedules
+                </button>
+            </div>
+        </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal">
-        <h2>Edit Schedule</h2>
-        <form id="editForm" method="POST" action="../../employee/supervisor/updateSchedule.php">
-            <input type="hidden" id="editEmployeeId" name="employee_id">
-            <label for="editShiftType">Shift Type:</label>
-            <select id="editShiftType" name="shift_type" required>
-                <option value="day">Day Shift</option>
-                <option value="night">Night Shift</option>
-            </select><br><br>
-            <label for="editScheduleDate">Schedule Date:</label>
-            <input type="date" id="editScheduleDate" name="schedule_date" required><br><br>
-            <label for="editStartTime">Start Time:</label>
-            <input type="time" id="editStartTime" name="start_time" required><br><br>
-            <label for="editEndTime">End Time:</label>
-            <input type="time" id="editEndTime" name="end_time" required><br><br>
-            <button type="submit">Save Changes</button>
-            <button type="button" onclick="closeEditModal()">Cancel</button>
-        </form>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center text-white">
+                <div>
+                    <i class="fas fa-table me-2 text-white"></i>Schedule Overview
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search employee..." id="searchInput">
+                        <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-secondary" id="refreshButton">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Employee Name</th>
+                            <th>Shift Type</th>
+                            <th>Schedule Date</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($result->num_rows > 0): ?>
+                            <?php while ($employee = $result->fetch_assoc()): ?>
+                                <?php
+                                // Fetch the employee's schedule
+                                $scheduleQuery = "SELECT * FROM employee_schedule WHERE employee_id = ? ORDER BY schedule_date DESC LIMIT 1";
+                                $stmt = $conn->prepare($scheduleQuery);
+                                $stmt->bind_param('i', $employee['e_id']);
+                                $stmt->execute();
+                                $scheduleResult = $stmt->get_result();
+                                $schedule = $scheduleResult->fetch_assoc();
+                                $stmt->close();
+
+                                // Determine shift badge class
+                                $shiftType = $schedule['shift_type'] ?? 'day';
+                                $badgeClass = ($shiftType == 'night') ? 'badge-night' : 'badge-day';
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($employee['e_id']); ?></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-2 bg-secondary">
+                                                <?php echo strtoupper(substr($employee['firstname'], 0, 1)); ?>
+                                            </div>
+                                            <?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $badgeClass; ?>">
+                                            <?php echo ucfirst(htmlspecialchars($schedule['shift_type'] ?? 'N/A')); ?> Shift
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($schedule['schedule_date'] ?? 'Not Scheduled'); ?></td>
+                                    <td><?php echo htmlspecialchars($schedule['start_time'] ?? 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($schedule['end_time'] ?? 'N/A'); ?></td>
+                                    <td>
+                                        <button class="btn btn-edit"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editModal"
+                                                data-employee-id="<?php echo $employee['e_id']; ?>"
+                                                data-employee-name="<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>">
+                                            <i class="fas fa-edit me-1"></i> Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <i class="fas fa-users-slash"></i>
+                                        <p>No employees found in the system.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    <li class="page-item <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <li class="page-item <?php echo $currentPage == $i ? 'active' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     </div>
 
-    <script>
-        // Function to open the edit modal and populate form fields
-        function openEditModal(employeeId) {
-            fetch(`/HR2/employee_db/supervisor/getSchedule.php?employee_id=${employeeId}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('editEmployeeId').value = employeeId;
-                    document.getElementById('editShiftType').value = data.shift_type || 'day';
-                    document.getElementById('editScheduleDate').value = data.schedule_date || '';
-                    document.getElementById('editStartTime').value = data.start_time || '';
-                    document.getElementById('editEndTime').value = data.end_time || '';
-                    document.getElementById('editModal').style.display = 'block';
-                })
-                .catch(error => console.error('Error fetching schedule:', error));
-        }
+    <!-- Edit Schedule Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Employee Schedule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editForm" method="POST" action="../../employee/supervisor/updateSchedule.php">
+                    <div class="modal-body">
+                        <input type="hidden" id="editEmployeeId" name="employee_id">
 
-        // Function to close the edit modal
-        function closeEditModal() {
-            document.getElementById('editModal').style.display = 'none';
-        }
+                        <div class="mb-3">
+                            <label class="form-label">Employee:</label>
+                            <div class="employee-name fw-bold" id="employeeName"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editShiftType" class="form-label">Shift Type:</label>
+                            <select class="form-select" id="editShiftType" name="shift_type" required>
+                                <option value="day">Day Shift</option>
+                                <option value="night">Night Shift</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editScheduleDate" class="form-label">Schedule Date:</label>
+                            <input type="date" class="form-control" id="editScheduleDate" name="schedule_date" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editStartTime" class="form-label">Start Time:</label>
+                                <input type="time" class="form-control" id="editStartTime" name="start_time" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="editEndTime" class="form-label">End Time:</label>
+                                <input type="time" class="form-control" id="editEndTime" name="end_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Edit Modal -->
+    <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkEditModalLabel">Bulk Edit Employee Schedules</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="bulkEditForm" method="POST" action="../../employee/supervisor/bulkUpdateSchedule.php">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Select Employees:</label>
+                            <div class="employee-select-container border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                <?php
+                                // Reset the result pointer
+                                $result->data_seek(0);
+                                while ($employee = $result->fetch_assoc()):
+                                ?>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="employee_ids[]" value="<?php echo $employee['e_id']; ?>" id="employee<?php echo $employee['e_id']; ?>">
+                                    <label class="form-check-label" for="employee<?php echo $employee['e_id']; ?>">
+                                        <?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>
+                                    </label>
+                                </div>
+                                <?php endwhile; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bulkShiftType" class="form-label">Shift Type:</label>
+                            <select class="form-select" id="bulkShiftType" name="shift_type" required>
+                                <option value="day">Day Shift</option>
+                                <option value="night">Night Shift</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="bulkScheduleDate" class="form-label">Schedule Date:</label>
+                                <input type="date" class="form-control" id="bulkScheduleDate" name="schedule_date" required>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="bulkStartTime" class="form-label">Start Time:</label>
+                                <input type="time" class="form-control" id="bulkStartTime" name="start_time" required>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="bulkEndTime" class="form-label">End Time:</label>
+                                <input type="time" class="form-control" id="bulkEndTime" name="end_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Apply to Selected</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Initialize Bootstrap tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Handle edit modal
+            const editModal = document.getElementById('editModal');
+            if (editModal) {
+                editModal.addEventListener('show.bs.modal', function (event) {
+                    const button = event.relatedTarget;
+                    const employeeId = button.getAttribute('data-employee-id');
+                    const employeeName = button.getAttribute('data-employee-name');
+
+                    // Set employee name in the modal
+                    document.getElementById('employeeName').textContent = employeeName;
+                    document.getElementById('editEmployeeId').value = employeeId;
+
+                    // Fetch the employee's schedule data
+                    fetch(`/HR2/employee_db/supervisor/getSchedule.php?employee_id=${employeeId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('editShiftType').value = data.shift_type || 'day';
+                            document.getElementById('editScheduleDate').value = data.schedule_date || '';
+                            document.getElementById('editStartTime').value = data.start_time || '';
+                            document.getElementById('editEndTime').value = data.end_time || '';
+                        })
+                        .catch(error => {
+                            console.error('Error fetching schedule:', error);
+                            // Show error toast or notification
+                            alert('Failed to load employee schedule data. Please try again.');
+                        });
+                });
+            }
+
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const scheduleTable = document.getElementById('scheduleTable');
+
+            function performSearch() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const rows = scheduleTable.querySelectorAll('tbody tr');
+
+                rows.forEach(row => {
+                    const employeeName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    if (employeeName.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+
+            if (searchButton) {
+                searchButton.addEventListener('click', performSearch);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function(event) {
+                    if (event.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+
+            // Refresh button
+            const refreshButton = document.getElementById('refreshButton');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', function() {
+                    location.reload();
+                });
+            }
+
+            // Style for avatar circles
+            const avatarCircles = document.querySelectorAll('.avatar-circle');
+            avatarCircles.forEach(avatar => {
+                avatar.style.width = '30px';
+                avatar.style.height = '30px';
+                avatar.style.borderRadius = '50%';
+                avatar.style.display = 'flex';
+                avatar.style.alignItems = 'center';
+                avatar.style.justifyContent = 'center';
+                avatar.style.fontWeight = 'bold';
+                avatar.style.color = 'white';
+            });
+        });
     </script>
 </body>
 </html>

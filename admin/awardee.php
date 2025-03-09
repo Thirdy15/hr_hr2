@@ -171,14 +171,20 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                         </div>
                         <!-- Add buttons for comments and reactions -->
                         <div class='comment-reaction-buttons'>
-                            <button class='btn btn-primary' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>Write a Comment</button>
+                            <button class='btn btn-primary' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
+                                <i class="bi bi-chat-dots-fill me-1"></i> Comments
+                            </button>
                             <div class='comment-input-container'>
-                            <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['e_id']; ?>" onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>React</button>
+                            <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['e_id']; ?>" onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>
+                                <i class="bi bi-emoji-smile-fill me-1"></i> React
+                            </button>
                             <div id='reaction-menu-<?php echo $row['e_id']; ?>' class='reaction-dropdown'>
                                     <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
                                     <button onclick='selectReaction("❤️ Heart", <?php echo $row['e_id']; ?>)'>❤️</button>
+                                    <button onclick='selectReaction("😎 Awesome", <?php echo $row['e_id']; ?>)'>😎</button>
+                                    <button onclick='selectReaction("😮 Wow", <?php echo $row['e_id']; ?>)'>😮</button>
                                     <button class='close-btn' onclick='closeReactions(<?php echo $row['e_id']; ?>)'>Close</button>
-                                </div>
+                               </div>
                             </div>
                         </div>
                         <div class='navigation-buttons'>
@@ -391,9 +397,13 @@ function getAllEmployees($conn) {
                         </div>
                         <!-- Add buttons for comments and reactions -->
                         <div class='comment-reaction-buttons'>
-                            <button class='btn btn-primary btn-sm' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>Write a Comment</button>
+                            <button class='btn btn-primary btn-sm' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
+                                <i class="bi bi-chat-dots-fill me-1"></i> Comments
+                            </button>
                             <div class='comment-input-container'>
-                                <button class='btn btn-primary btn-sm react-btn' onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>React</button>
+                                <button class='btn btn-primary btn-sm react-btn' onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>
+                                    <i class="bi bi-emoji-smile-fill me-1"></i> React
+                                </button>
                                 <div id='reaction-menu-<?php echo $row['e_id']; ?>' class='reaction-dropdown'>
                                     <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
                                     <button onclick='selectReaction("😂 Haha", <?php echo $row['e_id']; ?>)'>😂</button>
@@ -473,14 +483,14 @@ function getAllEmployees($conn) {
 }
 
 function getComments($conn, $employeeId) {
-    $sql = "SELECT comment FROM comments WHERE e_id = ?";
+    $sql = "SELECT comment, comment_time FROM comments WHERE e_id = ? ORDER BY comment_time DESC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $employeeId);
     $stmt->execute();
     $result = $stmt->get_result();
     $comments = [];
     while ($row = $result->fetch_assoc()) {
-        $comments[] = $row['comment'];
+        $comments[] = $row;
     }
     $stmt->close();
     return $comments;
@@ -755,319 +765,261 @@ function getComments($conn, $employeeId) {
             margin-top: 10px;
         }
 
+        /* Modern Comment Modal Styling */
         .modal-right {
             position: fixed;
-            top: 10%;
+            top: 0;
             right: 0;
-            width: 300px;
-            height: auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            width: 400px;
+            height: 100vh;
+            background: #212529;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+            padding: 0;
             display: none;
             z-index: 1000;
-            overflow: visible;
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
+        }
+
+        .modal-right.show {
+            transform: translateX(0);
+            display: flex;
+            flex-direction: column;
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            padding: 20px;
+            border-bottom: 1px solid #343a40;
+            background-color: #343a40;
+        }
+
+        .modal-header h5 {
+            color: white;
+            font-weight: 600;
+            margin: 0;
+            font-size: 1.25rem;
         }
 
         .modal-body {
-            margin-top: 20px;
-            overflow-y: visible;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .close-btn {
             background: none;
             border: none;
-            font-size: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
             cursor: pointer;
+            transition: color 0.2s;
         }
 
-        .comment-button {
-            background-color: #1877F2;
+        .close-btn:hover {
             color: white;
-            padding: 5px 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 10px;
         }
 
-        .comment-display {
-            background: #f1f1f1;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-
-        .reaction-container {
+        .comment-input-container {
             position: relative;
-            display: inline-block;
-        }
-
-        .like-button {
-            background-color: #1877F2;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .reaction-menu {
-            display: none;
-            position: absolute;
-            top: -40px;
-            left: 0;
-            background: white;
-            border-radius: 10px;
-            padding: 5px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            flex-direction: row;
-            gap: 5px;
-        }
-
-        .reaction {
-            cursor: pointer;
-            font-size: 20px;
-            transition: transform 0.2s;
-        }
-
-        .reaction:hover {
-            transform: scale(1.3);
-        }
-
-        .comment-section {
-            margin-top: 10px;
+            margin-bottom: 20px;
         }
 
         .comment-input {
             width: 100%;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            color: black;
-            margin-bottom: 10px;
+            padding: 12px 15px;
+            border: 1px solid #343a40;
+            border-radius: 30px;
+            background-color: #343a40;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        .comment-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
         }
 
         .comment-list {
-            max-height: 300px; /* Adjust the height as needed */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
             overflow-y: auto;
-            padding-right: 10px; /* Add padding to account for the scrollbar */
+            padding-right: 5px;
         }
 
         .comment {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
+            background-color: #343a40;
+            border-radius: 15px;
+            padding: 15px;
+            position: relative;
+            animation: fadeIn 0.3s ease-out forwards;
         }
 
-        .react-btn:hover {
-    transform: translateY(-2px);
-}
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
 
-.reaction-dropdown {
-    display: none;
-    position: absolute;
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 5px;
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
+        .comment-author {
+            font-weight: 600;
+            color: #0d6efd;
+        }
 
-.reaction-dropdown.show {
-    display: block;
-    opacity: 1;
-}
+        .comment-time {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
 
-.comment-reaction-buttons:hover .reaction-dropdown {
-    display: block;
-    opacity: 1;
-}
+        .comment-content {
+            color: white;
+            word-break: break-word;
+        }
 
-.reaction-dropdown:hover {
-    opacity: 1;
-}
+        .comment-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
 
-    
-     
-    .navigation-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 30px;
-    gap: 10px;
-    }
+        .comment-action {
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
 
-    .navigation-buttons .btn {
-        width: 55%;
-        
-    }
+        .comment-action:hover {
+            color: white;
+        }
 
+        .comment-post-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0d6efd;
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-post-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        .comment-post-btn i {
+            font-size: 16px;
+        }
+
+        /* Reaction dropdown styling */
+        .reaction-dropdown {
+            display: none;
+            position: absolute;
+            background-color: #343a40;
+            border-radius: 30px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            transform: translateY(-100%);
+            left: 0;
+            top: -10px;
+        }
+
+        .reaction-dropdown.show {
+            display: flex;
+            opacity: 1;
+        }
 
         .reaction-dropdown button {
             background: none;
             border: none;
             cursor: pointer;
             font-size: 20px;
-            margin: 5px;
-        }
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 14px;
-            border-radius: 5px;
+            margin: 0 5px;
+            transition: transform 0.2s;
         }
 
-        .comment-input-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .reaction-dropdown button:hover {
+            transform: scale(1.2);
         }
 
-        .comment-input {
-            width: 100%;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            color: black;
-        }
-        .comment-list {
-            margin-top: 5px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .comment {
-            background: transparent;
-            padding: 5px;
-            border-radius: 5px;
-            color: white;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        .modal-content {
-            background-color: rgba(51, 51, 51, 0.9);
-            color: white;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .modal-label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 18px;
+        .react-btn {
+            position: relative;
         }
 
-        .star-rating {
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .star {
-            font-size: 24px;
-            color: gold;
-            margin-right: 5px;
-        }
-
-        .star:not(.filled) {
-            color: #ccc;
-        }
-
-        .modal-right {
-            position: fixed;
-            bottom: 0;
-            left: 55%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 600px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            display: none;
-            z-index: 1000;
-            animation: slideUpFromBottom 0.5s forwards;
-            height: 500px;
-        }
-
-        .modal-header {
+        .navigation-buttons {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-
-        .modal-body {
-            margin-top: 20px;
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .comment-list {
-            display: flex;
-            flex-direction: column;
+            margin-top: 30px;
             gap: 10px;
         }
 
-        .comment {
-            display: flex;
-            align-items: center;
+        .navigation-buttons .btn {
+            width: 45%;
             padding: 10px;
-            border-radius: 10px;
-            background: #f1f1f1;
-            color: black;
-            word-wrap: break-word;
         }
 
-        @keyframes slideUpFromBottom {
-            0% {
-                transform: translateY(100%) translateX(-50%);
-                opacity: 0;
-            }
-            100% {
-                transform: translateY(0) translateX(-50%);
-                opacity: 1;
-            }
+        /* Scrollbar styling */
+        .comment-list::-webkit-scrollbar {
+            width: 6px;
         }
 
+        .comment-list::-webkit-scrollbar-track {
+            background: #212529;
+        }
+
+        .comment-list::-webkit-scrollbar-thumb {
+            background-color: #495057;
+            border-radius: 3px;
+        }
+
+        .comment-list::-webkit-scrollbar-thumb:hover {
+            background-color: #6c757d;
+        }
+
+        /* Empty state for comments */
+        .empty-comments {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+        }
+
+        .empty-comments i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-comments p {
+            font-size: 16px;
+        }
     </style>
 </head>
 <body class="sb-nav-fixed bg-black">
@@ -1076,6 +1028,15 @@ function getComments($conn, $employeeId) {
         <?php include 'sidebar.php'; ?>
     <div id="layoutSidenav_content">
         <main class="container-fluid position-relative bg-black">
+            <div class="container" id="calendarContainer"
+            style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050;
+                            width: 80%; height: 80%; display: none;">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div id="calendar" class="p-2"></div>
+                    </div>
+                </div>
+            </div>
             <h1 class="mb-2 text-light ms-2">Outstanding Employees by Evaluation Criteria</h1>
             <div class="container text-light">
                 <!-- Top Employees for Different Criteria -->
@@ -1122,8 +1083,39 @@ function getComments($conn, $employeeId) {
                     </div>
                 </div>
            </div>
+
+    <!-- Modern Comment Modal -->
+    <div id="commentModal" class="modal-right">
+        <div class="modal-header">
+            <h5><i class="bi bi-chat-dots-fill me-2"></i>Comments</h5>
+            <button class="close-btn" onclick="closeModal('commentModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="comment-input-container">
+                <input type="text" class="comment-input" placeholder="Write a comment..." onkeypress="postComment(event, this)">
+                <button class="comment-post-btn" onclick="postComment({key:'Enter'}, document.querySelector('.comment-input'))">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+            <div class="comment-list">
+                <!-- Comments will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Reaction Modal -->
+    <div id="reactionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('reactionModal')">&times;</span>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../../js/employee.js"></script>
 <script>
-        document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const buttons = document.querySelectorAll('.loading');
         const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
 
@@ -1169,394 +1161,369 @@ function getComments($conn, $employeeId) {
             }
         });
     });
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize progress circles
-            const circles = document.querySelectorAll('.progress-circle');
-            circles.forEach(circle => {
-                const progress = circle.getAttribute('data-progress');
-                const circumference = 2 * Math.PI * 90; // for r=90
-                const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-                // Create SVG element
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('class', 'progress-ring');
-                svg.setAttribute('width', '200');
-                svg.setAttribute('height', '200');
+    // TIME
+    function setCurrentTime() {
+        const currentTimeElement = document.getElementById('currentTime');
+        const currentDateElement = document.getElementById('currentDate');
 
-                // Create a circle for the background with the color rgb(16, 17, 18)
-                const backgroundCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                backgroundCircle.setAttribute('cx', '100');  // Center X coordinate
-                backgroundCircle.setAttribute('cy', '100');  // Center Y coordinate
-                backgroundCircle.setAttribute('r', '90');    // Radius
-                backgroundCircle.setAttribute('fill', 'rgb(16, 17, 18)');  // Background color
+        const currentDate = new Date();
 
-                // Append the background circle to the SVG
-                svg.appendChild(backgroundCircle);
+        currentDate.setHours(currentDate.getHours() + 0);
+        const hours = currentDate.getHours();
+        const minutes = currentDate.getMinutes();
+        const seconds = currentDate.getSeconds();
+        const formattedHours = hours < 10 ? '0' + hours : hours;
+        const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+        const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
 
-                // Now you can add other elements (e.g., a progress circle) on top of the background
-                // Create a progress circle (example)
-                const progressCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                progressCircle.setAttribute('cx', '100');
-                progressCircle.setAttribute('cy', '100');
-                progressCircle.setAttribute('r', '90');
-                progressCircle.setAttribute('fill', 'none');
-                progressCircle.setAttribute('stroke', 'rgb(16, 17, 18)');
-                progressCircle.setAttribute('stroke-width', '20');
+        currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+        currentDateElement.textContent = currentDate.toLocaleDateString();
+    }
+    setCurrentTime();
+    setInterval(setCurrentTime, 1000);
+    
+    function showNextCategory() {
+        // Hide the current category
+        document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
 
-                // Append the progress circle
-                svg.appendChild(progressCircle);
+        // Update to the next category index, loop back to 1 if at the end
+        currentCategoryIndex = (currentCategoryIndex % totalCategories) + 1;
 
-                // Add the SVG to the document (e.g., append it to the body or a specific element)
-                document.body.appendChild(svg);
+        // Show the next category
+        document.getElementById(`category-${currentCategoryIndex}`).style.display = 'block';
+    }
 
-                const circleElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circleElement.setAttribute('class', 'progress-ring__circle');
-                circleElement.setAttribute('stroke', '#22d3ee');
-                circleElement.setAttribute('stroke-width', '4');
-                circleElement.setAttribute('fill', 'transparent');
-                circleElement.setAttribute('r', '90');
-                circleElement.setAttribute('cx', '100');
-                circleElement.setAttribute('cy', '100');
-                circleElement.style.strokeDasharray = `${circumference} ${circumference}`;
-                circleElement.style.strokeDashoffset = strokeDashoffset;
+    function showPreviousCategory() {
+        // Hide the current category
+        document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
 
-                svg.appendChild(circleElement);
-                circle.insertBefore(svg, circle.firstChild);
-            });
+        // Update to the previous category index, loop back to totalCategories if at the start
+        currentCategoryIndex = (currentCategoryIndex - 1) || totalCategories;
+
+        // Show the previous category
+        document.getElementById(`category-${currentCategoryIndex}`).style.display = 'block';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize progress circles
+        const circles = document.querySelectorAll('.progress-circle');
+        circles.forEach(circle => {
+            const progress = circle.getAttribute('data-progress');
+            const circumference = 2 * Math.PI * 90; // for r=90
+            const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+            // Create SVG element
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'progress-ring');
+            svg.setAttribute('width', '200');
+            svg.setAttribute('height', '200');
+
+            // Create a circle for the background with the color rgb(16, 17, 18)
+            const backgroundCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            backgroundCircle.setAttribute('cx', '100');  // Center X coordinate
+            backgroundCircle.setAttribute('cy', '100');  // Center Y coordinate
+            backgroundCircle.setAttribute('r', '90');    // Radius
+            backgroundCircle.setAttribute('fill', 'rgb(16, 17, 18)');  // Background color
+
+            // Append the background circle to the SVG
+            svg.appendChild(backgroundCircle);
+
+            // Now you can add other elements (e.g., a progress circle) on top of the background
+            // Create a progress circle (example)
+            const progressCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            progressCircle.setAttribute('cx', '100');
+            progressCircle.setAttribute('cy', '100');
+            progressCircle.setAttribute('r', '90');
+            progressCircle.setAttribute('fill', 'none');
+            progressCircle.setAttribute('stroke', 'rgb(16, 17, 18)');
+            progressCircle.setAttribute('stroke-width', '20');
+
+            // Append the progress circle
+            svg.appendChild(progressCircle);
+
+            // Add the SVG to the document (e.g., append it to the body or a specific element)
+            document.body.appendChild(svg);
+
+            const circleElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circleElement.setAttribute('class', 'progress-ring__circle');
+            circleElement.setAttribute('stroke', '#22d3ee');
+            circleElement.setAttribute('stroke-width', '4');
+            circleElement.setAttribute('fill', 'transparent');
+            circleElement.setAttribute('r', '90');
+            circleElement.setAttribute('cx', '100');
+            circleElement.setAttribute('cy', '100');
+            circleElement.style.strokeDasharray = `${circumference} ${circumference}`;
+            circleElement.style.strokeDashoffset = strokeDashoffset;
+
+            svg.appendChild(circleElement);
+            circle.insertBefore(svg, circle.firstChild);
         });
+    });
 
     // Function to show/hide the reaction dropdown
-function showReactions(button, employeeId) {
-    const menu = document.getElementById('reaction-menu-' + employeeId);
-    menu.classList.toggle('show');
-}
+    function showReactions(button, employeeId) {
+        const menu = document.getElementById('reaction-menu-' + employeeId);
+        menu.classList.toggle('show');
+    }
 
-// Function to save a reaction
-function selectReaction(reaction, employeeId) {
-    fetch('save_reaction.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            employee_id: employeeId,
-            reaction: reaction
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Reaction saved: ' + reaction);
-        } else {
-            alert('Failed to save reaction');
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-// Function to open the comment modal
-function openCommentModal(employeeId) {
-    const modal = document.getElementById('commentModal');
-    modal.style.display = 'block';
-
-    // Add employee ID to the modal for reference
-    modal.setAttribute('data-employee-id', employeeId);
-
-    // Fetch and display existing comments
-    fetchComments(employeeId);
-}
-
-// Function to fetch and display comments
-function fetchComments(employeeId) {
-    fetch('fetch_comments.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ employee_id: employeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const commentList = document.querySelector('.modal-body .comment-list');
-        commentList.innerHTML = ''; // Clear existing comments
-        data.comments.forEach(comment => {
-            const newComment = document.createElement('div');
-            newComment.textContent = `${comment.username} (${comment.comment_time}): ${comment.comment}`;
-            newComment.classList.add('comment');
-            commentList.appendChild(newComment); // Add new comment at the bottom
-        });
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-// Function to post a comment
-function postComment(event, input) {
-    if (event.key === 'Enter' && input.value.trim() !== '') {
-        const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
-        const comment = input.value.trim();
-        const commentTime = new Date().toLocaleString(); // Get current time
-
-        fetch('save_comments.php', {
+    // Function to save a reaction
+    function selectReaction(reaction, employeeId) {
+        fetch('save_reaction.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 employee_id: employeeId,
-                comment: comment,
-                comment_time: commentTime
+                reaction: reaction
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                // Add the comment to the UI
-                const commentList = document.querySelector('.modal-body .comment-list');
-                const newComment = document.createElement('div');
-                newComment.textContent = `${data.username} (${commentTime}): ${comment}`;
-                newComment.classList.add('comment');
-                commentList.appendChild(newComment); // Add new comment at the bottom
-
-                input.value = ''; // Clear the input field
-
-                // Scroll to the bottom to show the new comment
-                commentList.scrollTop = commentList.scrollHeight;
+                alert('Reaction saved: ' + reaction);
+                closeReactions(employeeId);
             } else {
-                alert('Failed to save comment');
+                alert('Failed to save reaction');
             }
         })
         .catch(error => console.error('Error:', error));
     }
-}
 
+    // Function to open the comment modal with animation
+    function openCommentModal(employeeId) {
+        const modal = document.getElementById('commentModal');
+        modal.style.display = 'flex';
+        modal.classList.add('show');
 
- //Function to open the comment modal with animation
-function openCommentModal(employeeId) {
-    const modal = document.getElementById('commentModal');
-    modal.style.display = 'block';
+        // Add employee ID to the modal for reference
+        modal.setAttribute('data-employee-id', employeeId);
 
-    // Add employee ID to the modal for reference
-    modal.setAttribute('data-employee-id', employeeId);
-
-    // Fetch and display existing comments
-    fetchComments(employeeId);
-
-    // Trigger the animation
-    modal.style.animation = 'slideUpFromBottom 0.8s forwards';
-}
-
-// Function to close the comment modal
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.style.display = 'none';
-}
-
-// Function to close the reaction dropdown
-function closeReactions(employeeId) {
-    const menu = document.getElementById('reaction-menu-' + employeeId);
-    menu.classList.remove('show');
-}
-
-        function getStarRating($scorePercentage) {
-            // Max stars are 6, calculate the number of stars based on percentage
-            return Math.round(($scorePercentage / 100) * 6);
-        }
-
-        let currentCategoryIndex = 1;
-const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
-let currentEmployeeIndex = {};
-
-function showNextCategory() {
-    // Hide the current category
-    document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
-
-    // Update to the next category index, loop back to 1 if at the end
-    currentCategoryIndex = (currentCategoryIndex % totalCategories) + 1;
-
-    // Show the next category
-    document.getElementById(`category-${currentCategoryIndex}`).style.display = 'block';
-}
-
-function showPreviousCategory() {
-    // Hide the current category
-    document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
-
-    // Update to the previous category index, loop back to totalCategories if at the start
-    currentCategoryIndex = (currentCategoryIndex - 1) || totalCategories;
-
-    // Show the previous category
-    document.getElementById(`category-${currentCategoryIndex}`).style.display = 'block';
-}
-
-function showNextEmployee(categoryIndex) {
-    const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-    if (!currentEmployeeIndex[categoryIndex]) {
-        currentEmployeeIndex[categoryIndex] = 1;
+        // Fetch and display existing comments
+        fetchComments(employeeId);
     }
 
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-    currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
-}
-
-function showPreviousEmployee(categoryIndex) {
-    const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-    if (!currentEmployeeIndex[categoryIndex]) {
-        currentEmployeeIndex[categoryIndex] = 1;
+    // Function to close the comment modal
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
     }
 
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-    currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
-}
+    // Function to close the reaction dropdown
+    function closeReactions(employeeId) {
+        const menu = document.getElementById('reaction-menu-' + employeeId);
+        menu.classList.remove('show');
+    }
 
-function fetchComments(employeeId) {
-    fetch('fetch_comments.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ employee_id: employeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const commentList = document.querySelector('.modal-body .comment-list');
-        commentList.innerHTML = ''; // Clear existing comments
-        data.comments.forEach(comment => {
-            const newComment = document.createElement('div');
-            newComment.textContent = `${comment.username} (${comment.comment_time}): ${comment.comment}`;
-            newComment.classList.add('comment');
-            commentList.appendChild(newComment); // Add new comment at the bottom
-        });
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-function postComment(event, input) {
-    if (event.key === 'Enter' && input.value.trim() !== '') {
-        const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
-        const comment = input.value.trim();
-        const commentTime = new Date().toLocaleString(); // Get current time
-
-        fetch('save_comments.php', {
+    // Function to fetch and display comments with time ago format
+    function fetchComments(employeeId) {
+        fetch('fetch_comments.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                employee_id: employeeId,
-                comment: comment,
-                comment_time: commentTime
-            })
+            body: JSON.stringify({ employee_id: employeeId })
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'success') {
-                // Add the comment to the UI
-                const commentList = document.querySelector('.modal-body .comment-list');
-                const newComment = document.createElement('div');
-                newComment.textContent = `${data.username} (${commentTime}): ${comment}`;
-                newComment.classList.add('comment');
-                commentList.appendChild(newComment); // Add new comment at the bottom
-
-                input.value = ''; // Clear the input field
-
-                // Scroll to the bottom to show the new comment
-                commentList.scrollTop = commentList.scrollHeight;
+            const commentList = document.querySelector('.modal-body .comment-list');
+            commentList.innerHTML = ''; // Clear existing comments
+            
+            if (data.comments && data.comments.length > 0) {
+                data.comments.forEach(comment => {
+                    // Calculate time ago
+                    const timeAgo = getTimeAgo(new Date(comment.comment_time));
+                    
+                    // Create comment element
+                    const commentElement = document.createElement('div');
+                    commentElement.classList.add('comment');
+                    
+                    commentElement.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${comment.username || 'Anonymous'}</span>
+                            <span class="comment-time">${timeAgo}</span>
+                        </div>
+                        <div class="comment-content">${comment.comment}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                        </div>
+                    `;
+                    
+                    commentList.appendChild(commentElement);
+                });
             } else {
-                alert('Failed to save comment');
+                // Show empty state
+                const emptyState = document.createElement('div');
+                emptyState.classList.add('empty-comments');
+                emptyState.innerHTML = `
+                    <i class="bi bi-chat-square-text"></i>
+                    <p>No comments yet. Be the first to comment!</p>
+                `;
+                commentList.appendChild(emptyState);
             }
         })
         .catch(error => console.error('Error:', error));
     }
-}
 
-
-function showPreviousEmployee(categoryIndex) {
-    const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-    if (!currentEmployeeIndex[categoryIndex]) {
-        currentEmployeeIndex[categoryIndex] = 1;
+    // Function to calculate time ago
+    function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        let interval = Math.floor(seconds / 31536000);
+        if (interval > 1) return interval + ' years ago';
+        if (interval === 1) return '1 year ago';
+        
+        interval = Math.floor(seconds / 2592000);
+        if (interval > 1) return interval + ' months ago';
+        if (interval === 1) return '1 month ago';
+        
+        interval = Math.floor(seconds / 86400);
+        if (interval > 1) return interval + ' days ago';
+        if (interval === 1) return '1 day ago';
+        
+        interval = Math.floor(seconds / 3600);
+        if (interval > 1) return interval + ' hours ago';
+        if (interval === 1) return '1 hour ago';
+        
+        interval = Math.floor(seconds / 60);
+        if (interval > 1) return interval + ' minutes ago';
+        if (interval === 1) return '1 minute ago';
+        
+        if (seconds < 10) return 'just now';
+        
+        return Math.floor(seconds) + ' seconds ago';
     }
 
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-    currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
-    document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
-}
+    // Function to post a comment
+    function postComment(event, input) {
+        if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
+            const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
+            const comment = input.value.trim();
+            const commentTime = new Date().toISOString(); // Get current time in ISO format
 
-function autoDisplayEmployees(categoryIndex) {
-    setInterval(() => {
-        showNextEmployee(categoryIndex);
-    }, 15000); // Change every 5 seconds
-}
+            fetch('save_comments.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    employee_id: employeeId,
+                    comment: comment,
+                    comment_time: commentTime
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Add the comment to the UI
+                    const commentList = document.querySelector('.modal-body .comment-list');
+                    
+                    // Remove empty state if it exists
+                    const emptyState = commentList.querySelector('.empty-comments');
+                    if (emptyState) {
+                        emptyState.remove();
+                    }
+                    
+                    const commentElement = document.createElement('div');
+                    commentElement.classList.add('comment');
+                    
+                    commentElement.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${data.username || 'You'}</span>
+                            <span class="comment-time">just now</span>
+                        </div>
+                        <div class="comment-content">${comment}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                        </div>
+                    `;
+                    
+                    // Add new comment at the top
+                    commentList.insertBefore(commentElement, commentList.firstChild);
 
-window.onload = function() {
-    // Show the first category and first employee immediately
-    document.getElementById(`category-1`).style.display = 'block';
-    document.getElementById(`employee-1-1`).style.display = 'block';
-
-    // Start the slideshow after showing the first category
-    setInterval(showNextCategory, 30000); // Change every 30 seconds
-
-    // Auto display employees for each category
-    for (let i = 1; i <= totalCategories; i++) {
-        autoDisplayEmployees(i);
-    }
-
-    // Auto display all employees
-    document.getElementById(`employee-all-1`).style.display = 'block';
-   
-};
-
-
-        document.addEventListener('DOMContentLoaded', function () {
-    const commentList = document.querySelector('.comment-list');
-
-    commentList.addEventListener('mouseenter', function () {
-        commentList.classList.add('scrolling');
-    });
-
-    commentList.addEventListener('mouseleave', function () {
-        commentList.classList.remove('scrolling');
-    });
-
-    commentList.addEventListener('scroll', function () {
-        if (commentList.scrollTop + commentList.clientHeight >= commentList.scrollHeight) {
-            // Load more comments if needed
-            console.log('Reached the bottom of the comment list');
+                    input.value = ''; // Clear the input field
+                } else {
+                    alert('Failed to save comment');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
+    }
+
+    let currentCategoryIndex = 1;
+    const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
+    let currentEmployeeIndex = {};
+
+    function showNextEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    function showPreviousEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    function autoDisplayEmployees(categoryIndex) {
+        setInterval(() => {
+            showNextEmployee(categoryIndex);
+        }, 15000); // Change every 15 seconds
+    }
+
+    window.onload = function() {
+        // Show the first category and first employee immediately
+        document.getElementById(`category-1`).style.display = 'block';
+        document.getElementById(`employee-1-1`).style.display = 'block';
+
+        // Start the slideshow after showing the first category
+        setInterval(showNextCategory, 30000); // Change every 30 seconds
+
+        // Auto display employees for each category
+        for (let i = 1; i <= totalCategories; i++) {
+            autoDisplayEmployees(i);
+        }
+
+        // Auto display all employees
+        document.getElementById(`employee-all-1`).style.display = 'block';
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const commentList = document.querySelector('.comment-list');
+
+        commentList.addEventListener('mouseenter', function () {
+            commentList.classList.add('scrolling');
+        });
+
+        commentList.addEventListener('mouseleave', function () {
+            commentList.classList.remove('scrolling');
+        });
+
+        commentList.addEventListener('scroll', function () {
+            if (commentList.scrollTop + commentList.clientHeight >= commentList.scrollHeight) {
+                // Load more comments if needed
+                console.log('Reached the bottom of the comment list');
+            }
+        });
     });
-});
-
-
-    </script>
-
-  <!-- Comment Modal -->
-<div id="commentModal" class="modal-right">
-    <div class="modal-header">
-        <h5>Write a Comment</h5>
-        <button class="close-btn" onclick="closeModal('commentModal')">&times;</button>
-    </div>
-    <div class="modal-body">
-        <div class="comment-input-container">
-            <input type="text" class="comment-input" placeholder="Write your comment..." onkeypress="postComment(event, this)">
-            <button class="btn btn-primary" onclick="postComment(event, document.querySelector('.comment-input'))">Post</button>
-        </div>
-        <div class="comment-list"></div> <!-- Container to display comments -->
-    </div>
-</div>
-
-
-    <!-- Reaction Modal -->
-    <div id="reactionModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('reactionModal')">&times;</span>
-            <div class="modal-body"></div>
-        </div>
-    </div>
-
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../js/employee.js"></script>
+</script>
 </body>
 </html>
 

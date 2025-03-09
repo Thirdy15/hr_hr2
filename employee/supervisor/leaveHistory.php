@@ -121,217 +121,609 @@ function calculateLeaveDays($start_date, $end_date) {
     <title>Leave History</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background-color: #000;
-            color: black;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .table-dark {
-            background-color: #343a40;
+        
+        .container {
+            max-width: 1200px;
         }
-        .table-dark th, .table-dark td {
-            color: #fff;
+        
+        .card {
+            background-color: #000000;
+            border: 2px solid #555555; /* Wider border */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
+        
         .card-body {
-            background-color: #343a40;
+            background-color: #000000;
+            padding: 20px;
+            color: #ffffff;
         }
-        .table-primary th {
-            background-color: #6c757d;
-            color: #fff;
+        
+        .form-control, .form-select {
+            background-color: #000000;
+            border: 2px solid #555555; /* Wider border */
+            color: #ffffff;
+            transition: all 0.3s;
         }
-        .form-select, .form-control {
-            background-color: #6c757d;
-            color: #fff;
+        
+        .form-control:focus, .form-select:focus {
+            background-color: #000000;
+            border-color: #777777;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1);
         }
-        .btn-primary, .btn-dark {
-            background-color: #6c757d; /* Grey background */
-            border-color: #6c757d; /* Grey border */
-            color: #fff; /* White text */
-        }
+        
         .form-control::placeholder {
-            color: #f8f9fa; /* Whiter placeholder text */
+            color: #aaaaaa;
+        }
+        
+        .btn-dark {
+            background-color: #000000;
+            border: 2px solid #555555; /* Wider border */
+            color: #ffffff;
+            transition: all 0.3s;
+        }
+        
+        .btn-dark:hover {
+            background-color: #222222;
+            border-color: #777777;
+        }
+        
+        .btn-primary {
+            background-color: #000000;
+            border: 2px solid #555555; /* Wider border */
+            color: #ffffff;
+        }
+        
+        .btn-primary:hover {
+            background-color: #222222;
+            border-color: #777777;
+        }
+        
+        .btn-warning {
+            background-color: #333333;
+            border: 2px solid #666666; /* Wider border */
+            color: #ffffff;
+        }
+        
+        .btn-warning:hover {
+            background-color: #444444;
+            border-color: #888888;
+            color: #ffffff;
+        }
+        
+        .btn-danger {
+            background-color: #333333;
+            border: 2px solid #666666; /* Wider border */
+            color: #ffffff;
+        }
+        
+        .btn-danger:hover {
+            background-color: #444444;
+            border-color: #888888;
+            color: #ffffff;
+        }
+        
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            color: #ffffff;
+        }
+        
+        .table th, .table td {
+            border: 2px solid #555555; /* Wider border */
+            padding: 12px 15px;
+            vertical-align: middle;
+            color: #ffffff;
+        }
+        
+        .table th {
+            background-color: #111111;
+            font-weight: 600;
+            border-bottom: 3px solid #666666; /* Even wider bottom border for headers */
+            color: #ffffff;
+        }
+        
+        .table-dark {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        
+        .table-dark th {
+            background-color: #111111;
+            color: #ffffff;
+            border-color: #555555;
+        }
+        
+        .table-dark td {
+            background-color: #000000;
+            border-color: #555555;
+            color: #ffffff;
+        }
+        
+        .table-striped>tbody>tr:nth-of-type(odd)>* {
+            background-color: #111111;
+            color: #ffffff;
+        }
+        
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        
+        .table-hover tbody tr:hover td {
+            background-color: #222222 !important;
+            color: #ffffff;
+        }
+        
+        .text-success {
+            color: #4caf50 !important;
+        }
+        
+        .text-danger {
+            color: #f44336 !important;
+        }
+        
+        .text-warning {
+            color: #ffc107 !important;
+        }
+        
+        .text-primary {
+            color: #2196f3 !important;
+        }
+        
+        .text-muted {
+            color: #aaaaaa !important;
+        }
+        
+        .modal-content {
+            background-color: #000000;
+            color: #ffffff;
+            border: 2px solid #555555; /* Wider border */
+        }
+        
+        .modal-header, .modal-footer {
+            border-color: #555555;
+            border-width: 2px; /* Wider border */
+        }
+        
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        
+        .page-header {
+            border-bottom: 2px solid #555555; /* Wider border */
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        
+        .badge {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-weight: 500;
+            background-color: #333333;
+            color: #ffffff;
+            border: 1px solid #555555;
+        }
+        
+        .btn-group {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-buttons .btn {
+            margin: 0 2px;
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 100px;
+            text-align: center;
+            background-color: #000000;
+            border: 2px solid #555555; /* Wider border */
+        }
+        
+        .status-approved {
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+        
+        .status-denied {
+            border-color: #f44336;
+            color: #f44336;
+        }
+        
+        .status-pending {
+            border-color: #ffc107;
+            color: #ffc107;
+        }
+        
+        .status-supervisor {
+            border-color: #2196f3;
+            color: #2196f3;
+        }
+        
+        /* Filter section styling */
+        .filters-section {
+            background-color: #000000;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid #555555; /* Wider border */
+        }
+        
+        /* Header styling */
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0;
+            color: #ffffff;
+        }
+        
+        /* Table container with border */
+        .table-container {
+            border: 3px solid #555555; /* Even wider border for table container */
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        /* Input group styling */
+        .input-group-text {
+            background-color: #111111;
+            border: 2px solid #555555; /* Wider border */
+            color: #ffffff;
+        }
+        
+        /* Separator line */
+        .separator {
+            height: 2px; /* Thicker separator */
+            background-color: #555555;
+            margin: 15px 0;
+        }
+        
+        /* Employee info styling */
+        .employee-info {
+            padding: 15px;
+            border: 3px solid #555555; /* Wider border */
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background-color: #000000;
+        }
+        
+        .employee-info h5 {
+            color: #ffffff;
+            border-bottom: 2px solid #555555; /* Wider border */
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .employee-info p {
+            color: #ffffff;
+        }
+        
+        .employee-info strong {
+            color: #cccccc;
+        }
+        
+        /* Cell padding for better readability */
+        .table td, .table th {
+            padding: 15px; /* More padding in cells */
+        }
+        
+        /* Highlight current row */
+        .table tbody tr:hover {
+            outline: 2px solid #777777; /* Outline for hovered row */
+        }
+        
+        /* Section headers */
+        .section-header {
+            border-bottom: 2px solid #555555; /* Wider border */
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .table-responsive {
+                border: 2px solid #555555; /* Wider border */
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                margin: 2px 0;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-4 mb-5">
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4" style="color: white;">
-    <h1 class="h3">Leave History</h1>
-    <div>
-        <button class="btn btn-dark" onclick="window.location.href='leave_file.php'">Back</button> <!-- Navigate to leave_request page -->
-        <form method="POST" action="export_leave_history.php" style="display:inline;">
-            <input type="hidden" name="searchTerm" value="<?php echo htmlspecialchars($searchTerm); ?>">
-            <input type="hidden" name="fromDate" value="<?php echo htmlspecialchars($fromDate); ?>">
-            <input type="hidden" name="toDate" value="<?php echo htmlspecialchars($toDate); ?>">
-            <input type="hidden" name="statusFilter" value="<?php echo htmlspecialchars($statusFilter); ?>">
-            <input type="hidden" name="timeFrame" value="<?php echo htmlspecialchars($timeFrame); ?>">
-            <button type="submit" class="btn btn-dark">Export</button>
-        </form>
-    </div>
-</div>
-
-
-        <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form class="row g-3" method="GET" action="">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" name="searchTerm" placeholder="Search by Employee Name/ID" value="<?php echo htmlspecialchars($searchTerm); ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <input type="date" class="form-control" name="fromDate" placeholder="From Date" value="<?php echo htmlspecialchars($fromDate); ?>">
-                    </div>
-                    <div class="col-md-3">
-                        <input type="date" class="form-control" name="toDate" placeholder="To Date" value="<?php echo htmlspecialchars($toDate); ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="statusFilter">
-                            <option value="">Filter by Status</option>
-                            <option value="Approved" <?php if ($statusFilter == 'Approved') echo 'selected'; ?>>Approved</option>
-                            <option value="Pending" <?php if ($statusFilter == 'Pending') echo 'selected'; ?>>Pending</option>
-                            <option value="Denied" <?php if ($statusFilter == 'Denied') echo 'selected'; ?>>Denied</option>
-                            <option value="Supervisor Approved" <?php if ($statusFilter == 'Supervisor Approved') echo 'selected'; ?>>Supervisor Approved</option>
-                            
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="timeFrame">
-                            <option value="">Filter by Time Frame</option>
-                            <option value="day" <?php if ($timeFrame == 'day') echo 'selected'; ?>>Last Day</option>
-                            <option value="week" <?php if ($timeFrame == 'week') echo 'selected'; ?>>Last Week</option>
-                            <option value="month" <?php if ($timeFrame == 'month') echo 'selected'; ?>>Last Month</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-dark w-100">Apply Filters</button>
-                    </div>
+        <div class="d-flex justify-content-between align-items-center mb-4 page-header">
+            <h1 class="page-title">
+                <i class="fas fa-history me-2"></i> Leave History
+            </h1>
+            <div>
+                <button class="btn btn-dark me-2" onclick="window.location.href='leave_file.php'">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </button>
+                <form method="POST" action="export_leave_history.php" style="display:inline;">
+                    <input type="hidden" name="searchTerm" value="<?php echo htmlspecialchars($searchTerm); ?>">
+                    <input type="hidden" name="fromDate" value="<?php echo htmlspecialchars($fromDate); ?>">
+                    <input type="hidden" name="toDate" value="<?php echo htmlspecialchars($toDate); ?>">
+                    <input type="hidden" name="statusFilter" value="<?php echo htmlspecialchars($statusFilter); ?>">
+                    <input type="hidden" name="timeFrame" value="<?php echo htmlspecialchars($timeFrame); ?>">
+                    <button type="submit" class="btn btn-dark">
+                        <i class="fas fa-file-export me-1"></i> Export
+                    </button>
                 </form>
             </div>
         </div>
 
+        <!-- Employee Info Card -->
+        <div class="employee-info">
+            <h5 class="section-header"><i class="fas fa-user me-2"></i>Employee Information</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>Name:</strong> <?php echo htmlspecialchars($employeeInfo['firstname'] . ' ' . $employeeInfo['lastname']); ?></p>
+                    <p class="mb-2"><strong>ID:</strong> <?php echo htmlspecialchars($employeeInfo['e_id']); ?></p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>Position:</strong> <?php echo htmlspecialchars($employeeInfo['position']); ?></p>
+                    <p class="mb-2"><strong>Department:</strong> <?php echo htmlspecialchars($employeeInfo['department']); ?></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <h5 class="section-header"><i class="fas fa-filter me-2"></i>Filter Leave Records</h5>
+            <form class="row g-3" method="GET" action="">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" name="searchTerm" placeholder="Search by Name/ID" value="<?php echo htmlspecialchars($searchTerm); ?>">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-calendar-alt"></i>
+                        </span>
+                        <input type="date" class="form-control" name="fromDate" placeholder="From Date" value="<?php echo htmlspecialchars($fromDate); ?>">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-calendar-alt"></i>
+                        </span>
+                        <input type="date" class="form-control" name="toDate" placeholder="To Date" value="<?php echo htmlspecialchars($toDate); ?>">
+                    </div>
+                </div>
+                
+                <div class="separator w-100"></div>
+                
+                <div class="col-md-4">
+                    <select class="form-select" name="statusFilter">
+                        <option value="">Filter by Status</option>
+                        <option value="Approved" <?php if ($statusFilter == 'Approved') echo 'selected'; ?>>Approved</option>
+                        <option value="Pending" <?php if ($statusFilter == 'Pending') echo 'selected'; ?>>Pending</option>
+                        <option value="Denied" <?php if ($statusFilter == 'Denied') echo 'selected'; ?>>Denied</option>
+                        <option value="Supervisor Approved" <?php if ($statusFilter == 'Supervisor Approved') echo 'selected'; ?>>Supervisor Approved</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" name="timeFrame">
+                        <option value="">Filter by Time Frame</option>
+                        <option value="day" <?php if ($timeFrame == 'day') echo 'selected'; ?>>Last Day</option>
+                        <option value="week" <?php if ($timeFrame == 'week') echo 'selected'; ?>>Last Week</option>
+                        <option value="month" <?php if ($timeFrame == 'month') echo 'selected'; ?>>Last Month</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-dark w-100">
+                        <i class="fas fa-filter me-1"></i> Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Leave History Table -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-dark table-striped">
-                <thead class="table-primary">
-                    <tr>
-                        <th>Date Applied</th>
-                        <th>Employee ID</th>
-                        <th>Employee Name</th>
-                        <th>Leave Dates</th>
-                        <th>Leave Type</th>
-                        <th class="border-0">Total Leave Days</th> <!-- Removed border -->
-                        <th>Status</th>
-                        <th>Supervisor</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php if ($result->num_rows > 0): ?>
-                    <?php while ($row = $result->fetch_assoc()): ?>
-                        <?php
-                            $leave_days = calculateLeaveDays($row['start_date'], $row['end_date']);
-                        ?>
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead>
                         <tr>
-                            <td>
-                                <?php 
-                                    if (isset($row['created_at'])) {
-                                        echo htmlspecialchars(date("F j, Y", strtotime($row['created_at']))) . ' <span class="text-warning"> | </span> ' . htmlspecialchars(date("g:i A", strtotime($row['created_at'])));
-                                    } else {
-                                        echo "Not Available";
-                                    }
-                                ?>
-                            </td> 
-                            <td><?php echo htmlspecialchars($row['e_id']); ?></td>
-                            <td><?php echo htmlspecialchars($row['firstname'] . ' ' . $row['lastname']); ?></td>
-                            <td><?php echo htmlspecialchars(date("F j, Y", strtotime($row['start_date']))) . ' <span class="text-warning"> | </span> ' . htmlspecialchars(date("F j, Y", strtotime($row['end_date']))); ?></td>
-                            <td><?php echo htmlspecialchars($row['leave_type']); ?></td>
-                            <td><?php echo htmlspecialchars($leave_days); ?> day/s</td>
-                            <td>
-                                <?php 
+                            <th><i class="fas fa-calendar-check me-1"></i> Date Applied</th>
+                            <th><i class="fas fa-id-card me-1"></i> Employee ID</th>
+                            <th><i class="fas fa-user me-1"></i> Employee Name</th>
+                            <th><i class="fas fa-calendar-day me-1"></i> Leave Dates</th>
+                            <th><i class="fas fa-tag me-1"></i> Leave Type</th>
+                            <th><i class="fas fa-calculator me-1"></i> Total Days</th>
+                            <th><i class="fas fa-info-circle me-1"></i> Status</th>
+                            <th><i class="fas fa-user-tie me-1"></i> Supervisor</th>
+                            <th><i class="fas fa-cogs me-1"></i> Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php if ($result->num_rows > 0): ?>
+                        <?php while ($row = $result->fetch_assoc()): ?>
+                            <?php
+                                $leave_days = calculateLeaveDays($row['start_date'], $row['end_date']);
+                                
+                                // Determine status class
+                                $statusClass = '';
                                 $status = $row['status'];
                                 if ($status === 'Approved') {
-                                    echo '<span class="text-success" style="font-weight: bold;">' . $status . '</span>';
+                                    $statusClass = 'status-approved';
                                 } elseif ($status === 'Denied') {
-                                    echo '<span class="text-danger" style="font-weight: bold;">' . $status . '</span>';
+                                    $statusClass = 'status-denied';
                                 } elseif ($status === 'Pending') {
-                                    echo '<span class="text-warning" style="font-weight: bold;">' . $status . '</span>';
+                                    $statusClass = 'status-pending';
                                 } elseif ($status === 'Supervisor Approved' || $status === 'Supervisor Denied') {
-                                    echo '<span class="text-primary" style="font-weight: bold;">' . $status . '</span>';
+                                    $statusClass = 'status-supervisor';
                                 }
-                                ?>
+                            ?>
+                            <tr>
+                                <td>
+                                    <?php 
+                                        if (isset($row['created_at'])) {
+                                            echo '<span class="d-block">' . htmlspecialchars(date("F j, Y", strtotime($row['created_at']))) . '</span>';
+                                            echo '<small class="text-muted">' . htmlspecialchars(date("g:i A", strtotime($row['created_at']))) . '</small>';
+                                        } else {
+                                            echo "Not Available";
+                                        }
+                                    ?>
+                                </td> 
+                                <td><?php echo htmlspecialchars($row['e_id']); ?></td>
+                                <td><?php echo htmlspecialchars($row['firstname'] . ' ' . $row['lastname']); ?></td>
+                                <td>
+                                    <span class="d-block"><?php echo htmlspecialchars(date("F j, Y", strtotime($row['start_date']))); ?></span>
+                                    <span class="d-block text-muted">to</span>
+                                    <span class="d-block"><?php echo htmlspecialchars(date("F j, Y", strtotime($row['end_date']))); ?></span>
+                                </td>
+                                <td><?php echo htmlspecialchars($row['leave_type']); ?></td>
+                                <td>
+                                    <span class="badge"><?php echo htmlspecialchars($leave_days); ?> day<?php echo $leave_days > 1 ? 's' : ''; ?></span>
+                                </td>
+                                <td>
+                                    <span class="status-badge <?php echo $statusClass; ?>">
+                                        <?php echo htmlspecialchars($status); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php 
+                                    $supervisorName = htmlspecialchars($row['supervisor_firstname'] . ' ' . $row['supervisor_lastname']);
+                                    if ($supervisorName != ' ' && ($status === 'Supervisor Approved' || $status === 'Supervisor Denied' || $status === 'Denied' || $status === 'Approved')) {
+                                        echo $supervisorName;
+                                    } else {
+                                        echo '<span class="text-muted">N/A</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <!-- 
+                                    <td>
+                                        <div class="d-flex action-buttons">
+                                            <button class="btn btn-sm btn-warning me-1" onclick="editItem(<?php echo $row['id']; ?>)" <?php if ($status === 'Approved' || $status === 'Denied') echo 'disabled'; ?>>
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-id="<?php echo $row['id']; ?>" <?php if ($status === 'Approved') echo 'disabled'; ?>>
+                                                <i class="fas fa-times-circle"></i> Cancel
+                                            </button>
+                                        </div>
+                                    </td> 
+                                    -->
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <i class="fas fa-folder-open fa-3x mb-3 text-muted"></i>
+                                <p class="mb-0">No leave records found</p>
                             </td>
-                            <td>
-                                <?php 
-                                $supervisorName = htmlspecialchars($row['supervisor_firstname'] . ' ' . $row['supervisor_lastname']);
-                                if ($status === 'Supervisor Approved' || $status === 'Supervisor Denied') {
-                                    echo '<span class="text-primary" style="font-weight: bold;">' . $supervisorName . '</span>';
-                                } elseif ($status === 'Denied') {
-                                    echo '<span class="text-danger" style="font-weight: bold;">' . $supervisorName . '</span>';
-                                } elseif ($status === 'Approved') {
-                                    echo '<span class="text-success" style="font-weight: bold;">' . $supervisorName . '</span>';
-                                } else {
-                                    echo 'N/A';
-                                }
-                                ?>
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group" style="gap: 10px; display: flex;">
-                
-                                    <button class="btn btn-sm btn-warning flex-fill" onclick="editItem()">Edit</button>
-                                    <button class="btn btn-sm btn-danger flex-fill" data-bs-toggle="modal" data-bs-target="#deleteModal" <?php if ($row['status'] === 'Approved') echo 'disabled'; ?>>Cancel</button>
-                                </div>
-                            </td>
-                       </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr>
-                            <td colspan="9" class="text-center">No records found</td>
-                    </tr>
-                <?php endif; ?>
-                </tbody>
-            </table>
+                        </tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this item?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Confirm Cancellation
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this leave request? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> No, Keep It
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="fas fa-check me-1"></i> Yes, Cancel Leave
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    // View Button Function
-    function viewItem() {
-        alert("View button clicked.");
-        // You can replace this with the code for showing more details, redirecting to a view page, etc.
-    }
+    <script>
+        // Store the ID of the item to be deleted
+        let itemToDelete = null;
+        
+        // Set up event listener for delete modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteModal = document.getElementById('deleteModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    itemToDelete = button.getAttribute('data-id');
+                });
+            }
+        });
+        
+        // View Button Function
+        function viewItem(id) {
+            alert("View button clicked for item ID: " + id);
+            // You can replace this with the code for showing more details, redirecting to a view page, etc.
+        }
 
-    // Edit Button Function
-    function editItem() {
-        alert("Edit button clicked.");
-        // You can replace this with the code for opening an edit form or redirecting to an edit page, etc.
-    }
+        // Edit Button Function
+        function editItem(id) {
+            alert("Edit button clicked for item ID: " + id);
+            // You can replace this with the code for opening an edit form or redirecting to an edit page, etc.
+        }
 
-    // Delete Button Function
-    function confirmDelete() {
-        alert("Item deleted.");
-        // You can replace this with code to actually delete the item, like sending a request to a server.
-    }
-</script>
+        // Delete Button Function
+        function confirmDelete() {
+            if (itemToDelete) {
+                alert("Cancelling leave request ID: " + itemToDelete);
+                // You can replace this with code to actually delete the item, like sending a request to a server.
+                // After successful deletion, you might want to reload the page or update the UI
+                // window.location.reload();
+            }
+            
+            // Close the modal
+            const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+            if (deleteModal) {
+                deleteModal.hide();
+            }
+        }
+    </script>
+    
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

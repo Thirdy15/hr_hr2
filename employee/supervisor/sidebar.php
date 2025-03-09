@@ -75,9 +75,8 @@
                         </a>
                         <div class="collapse" id="collapsePM" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light loading" href="../../employee/supervisor/kpi.php">Performance</a>
                                 <a class="nav-link text-light loading" href="../../employee/supervisor/evaluation.php">Evaluation Ratings</a>
-                                <a class="nav-link text-light loading" href="../../employee/supervisor/evaluation.php">Evaluation</a>
+                                <a class="nav-link text-light loading" href="../../employee/supervisor/evaluation.php">Evaluation Department</a>
                             </nav>
                         </div>
                         <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseSR" aria-expanded="false" aria-controls="collapseSR">
