@@ -13,6 +13,32 @@ if (!isset($_SESSION['a_id'])) {
 $adminId = $_SESSION['a_id'];
 
 try {
+    // Handle reaction notifications if data is sent
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $employeeId = $data['employee_id'];
+        $reaction = $data['reaction'];
+
+        // Insert the reaction notification into the database
+        $message = "New reaction: $reaction from employee ID $employeeId";
+        $insertQuery = "
+            INSERT INTO notifications (admin_id, message, status) 
+            VALUES (?, ?, 'unread')";
+        $insertStmt = $conn->prepare($insertQuery);
+
+        if (!$insertStmt) {
+            throw new Exception("Failed to prepare the SQL statement: " . $conn->error);
+        }
+
+        $insertStmt->bind_param("is", $adminId, $message);
+
+        if (!$insertStmt->execute()) {
+            throw new Exception("Failed to execute the SQL statement: " . $insertStmt->error);
+        }
+
+        $insertStmt->close();
+    }
+
     // Fetch all notifications (both read and unread)
     $notificationQuery = "
         SELECT notification_id, message, created_at, status 

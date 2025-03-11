@@ -171,12 +171,12 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                         </div>
                         <!-- Add buttons for comments and reactions -->
                         <div class='comment-reaction-buttons'>
-                            <button class='btn btn-primary' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
-                                <i class="bi bi-chat-dots-fill me-1"></i> Comments
-                            </button>
+                        <button id="comment-button-<?php echo $row['e_id']; ?>" class='btn btn-primary comment-btn' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
+                            <i class="bi bi-chat-dots-fill me-1"></i> Comments (<span id="comment-count-<?php echo $row['e_id']; ?>">0</span>)
+                        </button>
                             <div class='comment-input-container'>
                             <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['e_id']; ?>" onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>
-                                <i class="bi bi-emoji-smile-fill me-1"></i> React
+                                <i class="bi bi-emoji-smile-fill me-1"></i> React (<span id="reaction-count-<?php echo $row['e_id']; ?>">0</span>)
                             </button>
                             <div id='reaction-menu-<?php echo $row['e_id']; ?>' class='reaction-dropdown'>
                                     <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
@@ -187,10 +187,7 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                                </div>
                             </div>
                         </div>
-                        <div class='navigation-buttons'>
-                            <button class='btn btn-primary' onclick='showPreviousEmployee(<?php echo $index; ?>)'>Previous</button>
-                            <button class='btn btn-primary' onclick='showNextEmployee(<?php echo $index; ?>)'>Next</button>
-                        </div>
+
                     </div>
                     <!-- Right metrics -->
                     <div class='metrics-column'>
@@ -398,11 +395,11 @@ function getAllEmployees($conn) {
                         <!-- Add buttons for comments and reactions -->
                         <div class='comment-reaction-buttons'>
                             <button class='btn btn-primary btn-sm' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
-                                <i class="bi bi-chat-dots-fill me-1"></i> Comments
+                                <i class="bi bi-chat-dots-fill me-1"></i> Comments (<span id="comment-count-<?php echo $row['e_id']; ?>">0</span>)
                             </button>
                             <div class='comment-input-container'>
                                 <button class='btn btn-primary btn-sm react-btn' onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>
-                                    <i class="bi bi-emoji-smile-fill me-1"></i> React
+                                    <i class="bi bi-emoji-smile-fill me-1"></i> React (<span id="reaction-count-<?php echo $row['e_id']; ?>">0</span>)
                                 </button>
                                 <div id='reaction-menu-<?php echo $row['e_id']; ?>' class='reaction-dropdown'>
                                     <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
@@ -476,7 +473,7 @@ function getAllEmployees($conn) {
         <?php
     }
     ?>
-    
+
     </div>
     <?php
     $stmt->close();
@@ -763,8 +760,24 @@ function getComments($conn, $employeeId) {
             display: flex;
             gap: 10px;
             margin-top: 10px;
+            height: 3rem;
         }
 
+        .comment-reaction-buttons .react-btn {
+            position: relative;
+        }
+
+        .comment-reaction-buttons .react-btn:hover .reaction-dropdown {
+            display: block;
+        }
+
+        .comment-btn {
+            padding: -10px; /* Adjust padding to make the button smaller */
+            font-size: 1rem;    /* Adjust font size to make the text smaller */
+            line-height: 5px;       /* Adjust line height for better alignment */
+            border-radius: 1rem; /* Optional: Adjust border radius for a more rounded look */
+
+        }
         /* Modern Comment Modal Styling */
         .modal-right {
             position: fixed;
@@ -772,6 +785,7 @@ function getComments($conn, $employeeId) {
             right: 0;
             width: 400px;
             height: 100vh;
+            margin-top: 5rem;
             background: #212529;
             box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
             padding: 0;
@@ -792,7 +806,7 @@ function getComments($conn, $employeeId) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
+            padding: 10px;
             border-bottom: 1px solid #343a40;
             background-color: #343a40;
         }
@@ -872,6 +886,7 @@ function getComments($conn, $employeeId) {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
+
         }
 
         .comment-author {
@@ -973,13 +988,16 @@ function getComments($conn, $employeeId) {
         .navigation-buttons {
             display: flex;
             justify-content: space-between;
-            margin-top: 30px;
+            margin-top: 20px;
             gap: 10px;
+
         }
 
         .navigation-buttons .btn {
-            width: 45%;
+            width: 5%;
             padding: 10px;
+            margin-left: 350px;
+            margin-right: 350px;
         }
 
         /* Scrollbar styling */
@@ -1048,7 +1066,7 @@ function getComments($conn, $employeeId) {
                 <?php getAllEmployees($conn); ?>
 
                 <!-- Navigation buttons for manually controlling the categories -->
-                
+
             </div>
         </main>
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -1070,6 +1088,10 @@ function getComments($conn, $employeeId) {
                     </div>
                 </div>
             </div>
+            <div class='navigation-buttons'>
+                            <button class='btn btn-primary' onclick='showPreviousEmployee(1)'>Previous</button>
+                            <button class='btn btn-primary' onclick='showNextEmployee(1)'>Next</button>
+                        </div>
         <?php include 'footer.php'; ?>
     </div>
     <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
@@ -1162,27 +1184,6 @@ function getComments($conn, $employeeId) {
         });
     });
 
-    // TIME
-    function setCurrentTime() {
-        const currentTimeElement = document.getElementById('currentTime');
-        const currentDateElement = document.getElementById('currentDate');
-
-        const currentDate = new Date();
-
-        currentDate.setHours(currentDate.getHours() + 0);
-        const hours = currentDate.getHours();
-        const minutes = currentDate.getMinutes();
-        const seconds = currentDate.getSeconds();
-        const formattedHours = hours < 10 ? '0' + hours : hours;
-        const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-        const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-
-        currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
-        currentDateElement.textContent = currentDate.toLocaleDateString();
-    }
-    setCurrentTime();
-    setInterval(setCurrentTime, 1000);
-    
     function showNextCategory() {
         // Hide the current category
         document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
@@ -1267,42 +1268,100 @@ function getComments($conn, $employeeId) {
         menu.classList.toggle('show');
     }
 
-    // Function to save a reaction
-    function selectReaction(reaction, employeeId) {
-        fetch('save_reaction.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                employee_id: employeeId,
-                reaction: reaction
-            })
+    
+    // Function to save a reaction and trigger a notification
+// Function to save a reaction and trigger a notification
+function selectReaction(reaction, employeeId) {
+    fetch('save_reaction.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            employee_id: employeeId,
+            reaction: reaction
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Reaction saved: ' + reaction);
-                closeReactions(employeeId);
-            } else {
-                alert('Failed to save reaction');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Reaction saved: ' + reaction);
+            closeReactions(employeeId);
+            updateReactionCount(employeeId);
 
+            // Send a notification after saving the reaction
+            sendNotification(employeeId, reaction);
+        } else {
+            alert('Failed to save reaction');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Function to send a notification
+function sendNotification(employeeId, reaction) {
+    fetch('../db/fetchnotif.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            employee_id: employeeId,
+            reaction: reaction
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Notification sent successfully');
+            // Add the new notification to the notification dropdown
+            addNotificationToDropdown(data.notification);
+        } else {
+            console.error('Failed to send notification:', data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Function to add a new notification to the dropdown
+function addNotificationToDropdown(notification) {
+    const notificationList = document.getElementById('notificationList');
+
+    // Create a new notification item
+    const listItem = document.createElement('li');
+    listItem.innerHTML = `
+        <a class="dropdown-item" href="#">
+            <div class="d-flex justify-content-between">
+                <span>${notification.message}</span>
+                <small class="text-muted">${new Date(notification.created_at).toLocaleString()}</small>
+            </div>
+            <div class="d-flex justify-content-end mt-2">
+                <button class="btn btn-sm btn-danger delete-notification" data-id="${notification.notification_id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </a>`;
+
+    // Add the new notification at the top of the list
+    notificationList.insertBefore(listItem, notificationList.firstChild);
+
+    // Update the notification count
+    const notificationCount = document.getElementById('notificationCount');
+    const currentCount = parseInt(notificationCount.textContent, 10);
+    notificationCount.textContent = currentCount + 1;
+}
     // Function to open the comment modal with animation
     function openCommentModal(employeeId) {
-        const modal = document.getElementById('commentModal');
-        modal.style.display = 'flex';
-        modal.classList.add('show');
+    const modal = document.getElementById('commentModal');
+    modal.style.display = 'flex';
+    modal.classList.add('show');
 
-        // Add employee ID to the modal for reference
-        modal.setAttribute('data-employee-id', employeeId);
+    // Add employee ID to the modal for reference
+    modal.setAttribute('data-employee-id', employeeId);
 
-        // Fetch and display existing comments
-        fetchComments(employeeId);
-    }
+    // Fetch and display existing comments and update the comment count
+    fetchComments(employeeId);
+}
 
     // Function to close the comment modal
     function closeModal(modalId) {
@@ -1319,143 +1378,153 @@ function getComments($conn, $employeeId) {
         menu.classList.remove('show');
     }
 
-    // Function to fetch and display comments with time ago format
-    function fetchComments(employeeId) {
-        fetch('fetch_comments.php', {
+   // Function to fetch and display comments with time ago format
+function fetchComments(employeeId) {
+    fetch('fetch_comments.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ employee_id: employeeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const commentList = document.querySelector('.modal-body .comment-list');
+        commentList.innerHTML = ''; // Clear existing comments
+
+        if (data.comments && data.comments.length > 0) {
+            data.comments.forEach(comment => {
+                // Calculate time ago using the getTimeAgo function
+                const timeAgo = getTimeAgo(comment.created_at);
+
+                // Create comment element
+                const commentElement = document.createElement('div');
+                commentElement.classList.add('comment');
+
+                commentElement.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.username || 'Anonymous'}</span>
+                        <span class="comment-time">${timeAgo}</span>
+                    </div>
+                    <div class="comment-content">${comment.comment}</div>
+                    <div class="comment-actions">
+                        <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                        <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                    </div>
+                `;
+
+                commentList.appendChild(commentElement);
+            });
+
+            // Update the comment count
+            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+            if (commentCountElement) {
+                commentCountElement.textContent = data.total_comments;
+            }
+        } else {
+            // Show empty state
+            const emptyState = document.createElement('div');
+            emptyState.classList.add('empty-comments');
+            emptyState.innerHTML = `
+                <i class="bi bi-chat-square-text"></i>
+                <p>No comments yet. Be the first to comment!</p>
+            `;
+            commentList.appendChild(emptyState);
+
+            // Update the comment count to 0
+            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+            if (commentCountElement) {
+                commentCountElement.textContent = 0;
+            }
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Function to calculate time ago
+function getTimeAgo(date) {
+    const now = new Date();
+    const past = new Date(date); // Ensure 'date' is a Date object
+    const seconds = Math.floor((now - past) / 1000);
+    
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return interval === 1 ? '1 year ago' : interval + ' years ago';
+
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return interval === 1 ? '1 month ago' : interval + ' months ago';
+
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return interval === 1 ? '1 day ago' : interval + ' days ago';
+
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return interval === 1 ? '1 hour ago' : interval + ' hours ago';
+
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return interval === 1 ? '1 minute ago' : interval + ' minutes ago';
+
+    return seconds < 10 ? 'just now' : seconds + ' seconds ago';
+}
+
+// Example usage
+console.log(getTimeAgo("2024-02-22 14:30:00")); // Output: "X hours ago" or similar
+console.log(getTimeAgo(new Date() - 5000)); // Output: "5 seconds ago"
+    // Function to post a comment
+    function postComment(event, input) {
+    if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
+        const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
+        const comment = input.value.trim();
+
+        fetch('save_comments.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ employee_id: employeeId })
+            body: JSON.stringify({
+                employee_id: employeeId,
+                comment: comment
+            })
         })
         .then(response => response.json())
         .then(data => {
-            const commentList = document.querySelector('.modal-body .comment-list');
-            commentList.innerHTML = ''; // Clear existing comments
-            
-            if (data.comments && data.comments.length > 0) {
-                data.comments.forEach(comment => {
-                    // Calculate time ago
-                    const timeAgo = getTimeAgo(new Date(comment.comment_time));
-                    
-                    // Create comment element
-                    const commentElement = document.createElement('div');
-                    commentElement.classList.add('comment');
-                    
-                    commentElement.innerHTML = `
-                        <div class="comment-header">
-                            <span class="comment-author">${comment.username || 'Anonymous'}</span>
-                            <span class="comment-time">${timeAgo}</span>
-                        </div>
-                        <div class="comment-content">${comment.comment}</div>
-                        <div class="comment-actions">
-                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
-                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
-                        </div>
-                    `;
-                    
-                    commentList.appendChild(commentElement);
-                });
-            } else {
-                // Show empty state
-                const emptyState = document.createElement('div');
-                emptyState.classList.add('empty-comments');
-                emptyState.innerHTML = `
-                    <i class="bi bi-chat-square-text"></i>
-                    <p>No comments yet. Be the first to comment!</p>
+            if (data.status === 'success') {
+                // Add the comment to the UI
+                const commentList = document.querySelector('.modal-body .comment-list');
+
+                // Remove empty state if it exists
+                const emptyState = commentList.querySelector('.empty-comments');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+
+                const commentElement = document.createElement('div');
+                commentElement.classList.add('comment');
+
+                commentElement.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-author">${data.username || 'You'}</span>
+                        <span class="comment-time">just now</span>
+                    </div>
+                    <div class="comment-content">${comment}</div>
+                    <div class="comment-actions">
+                        <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                        <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                    </div>
                 `;
-                commentList.appendChild(emptyState);
+
+                // Add new comment at the top
+                commentList.insertBefore(commentElement, commentList.firstChild);
+
+                input.value = ''; // Clear the input field
+
+                // Refresh the comment count
+                fetchComments(employeeId);
+            } else {
+                alert('Failed to save comment');
             }
         })
         .catch(error => console.error('Error:', error));
     }
-
-    // Function to calculate time ago
-    function getTimeAgo(date) {
-        const seconds = Math.floor((new Date() - date) / 1000);
-        
-        let interval = Math.floor(seconds / 31536000);
-        if (interval > 1) return interval + ' years ago';
-        if (interval === 1) return '1 year ago';
-        
-        interval = Math.floor(seconds / 2592000);
-        if (interval > 1) return interval + ' months ago';
-        if (interval === 1) return '1 month ago';
-        
-        interval = Math.floor(seconds / 86400);
-        if (interval > 1) return interval + ' days ago';
-        if (interval === 1) return '1 day ago';
-        
-        interval = Math.floor(seconds / 3600);
-        if (interval > 1) return interval + ' hours ago';
-        if (interval === 1) return '1 hour ago';
-        
-        interval = Math.floor(seconds / 60);
-        if (interval > 1) return interval + ' minutes ago';
-        if (interval === 1) return '1 minute ago';
-        
-        if (seconds < 10) return 'just now';
-        
-        return Math.floor(seconds) + ' seconds ago';
-    }
-
-    // Function to post a comment
-    function postComment(event, input) {
-        if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
-            const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
-            const comment = input.value.trim();
-            const commentTime = new Date().toISOString(); // Get current time in ISO format
-
-            fetch('save_comments.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    employee_id: employeeId,
-                    comment: comment,
-                    comment_time: commentTime
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Add the comment to the UI
-                    const commentList = document.querySelector('.modal-body .comment-list');
-                    
-                    // Remove empty state if it exists
-                    const emptyState = commentList.querySelector('.empty-comments');
-                    if (emptyState) {
-                        emptyState.remove();
-                    }
-                    
-                    const commentElement = document.createElement('div');
-                    commentElement.classList.add('comment');
-                    
-                    commentElement.innerHTML = `
-                        <div class="comment-header">
-                            <span class="comment-author">${data.username || 'You'}</span>
-                            <span class="comment-time">just now</span>
-                        </div>
-                        <div class="comment-content">${comment}</div>
-                        <div class="comment-actions">
-                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
-                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
-                        </div>
-                    `;
-                    
-                    // Add new comment at the top
-                    commentList.insertBefore(commentElement, commentList.firstChild);
-
-                    input.value = ''; // Clear the input field
-                } else {
-                    alert('Failed to save comment');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    }
-
+}
     let currentCategoryIndex = 1;
     const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
     let currentEmployeeIndex = {};
@@ -1482,24 +1551,10 @@ function getComments($conn, $employeeId) {
         document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
     }
 
-    function autoDisplayEmployees(categoryIndex) {
-        setInterval(() => {
-            showNextEmployee(categoryIndex);
-        }, 15000); // Change every 15 seconds
-    }
-
     window.onload = function() {
         // Show the first category and first employee immediately
         document.getElementById(`category-1`).style.display = 'block';
         document.getElementById(`employee-1-1`).style.display = 'block';
-
-        // Start the slideshow after showing the first category
-        setInterval(showNextCategory, 30000); // Change every 30 seconds
-
-        // Auto display employees for each category
-        for (let i = 1; i <= totalCategories; i++) {
-            autoDisplayEmployees(i);
-        }
 
         // Auto display all employees
         document.getElementById(`employee-all-1`).style.display = 'block';
@@ -1523,7 +1578,32 @@ function getComments($conn, $employeeId) {
             }
         });
     });
+
+    // Function to update the reaction count
+    function updateReactionCount(employeeId) {
+    fetch('fetch_reaction_count.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ employee_id: employeeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update the reaction count in the UI
+            const reactionCountElement = document.getElementById(`reaction-count-${employeeId}`);
+            reactionCountElement.textContent = data.count;
+        } else {
+            console.error('Failed to fetch reaction count');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
 </script>
+<!-- Add these lines to your HTML to include the new PHP files -->
+<script src="fetch_comments.php"></script>
+<script src="fetch_reaction_count.php"></script>
 </body>
 </html>
 

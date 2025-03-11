@@ -1,280 +1,254 @@
+
 <?php
 session_start();
 
+// Include database connection
+include '../../db/db_conn.php'; 
+
 if (!isset($_SESSION['e_id'])) {
-    header("Location: ../employee/employeelogin.php");
+    header("Location: ../../employee/login.php");
     exit();
 }
 
-// Include the database connection  
-include '../../db/db_conn.php'; 
-
-$position = $_SESSION['position']; // Ensure this is set during login
-$department = $_SESSION['department']; // Ensure this is set during login
-
-// Define the role
-$role = 'employee';
-
-// Fetch employee records where role is 'employee' and department matches the logged-in employee's department
-// Assume you have the values for $role, $department, and $position
-$sql = "SELECT e_id, firstname, lastname, role, position FROM employee_register WHERE role = ? AND department = ? AND position IN ('supervisor', 'staff', 'fieldworker', 'contractual')";
+$employeeId = $_SESSION['e_id'];
+$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param('ss', $role, $department);  // Bind the parameters for role and department (both strings)
+$stmt->bind_param("i", $employeeId);
+$stmt->execute();
+$result = $stmt->get_result();
+$employeeInfo = $result->fetch_assoc();
+
+$employeeId = $_SESSION['e_id'];
+
+// Fetch the average of the employee's evaluations
+$sql = "SELECT 
+            AVG(quality) AS avg_quality, 
+            AVG(communication_skills) AS avg_communication_skills, 
+            AVG(teamwork) AS avg_teamwork, 
+            AVG(punctuality) AS avg_punctuality, 
+            AVG(initiative) AS avg_initiative,
+            COUNT(*) AS total_evaluations 
+        FROM admin_evaluations 
+        WHERE e_id = ?";
+        
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $employeeId);
 $stmt->execute();
 $result = $stmt->get_result();
 
-
-// Fetch evaluations for this employee
-$employeeId = $_SESSION['e_id'];
-$evaluatedEmployees = [];
-$evalSql = "SELECT e_id FROM admin_evaluations WHERE e_id = ?";
-$evalStmt = $conn->prepare($evalSql);
-$evalStmt->bind_param('i', $employeeId);
-$evalStmt->execute();
-$evalResult = $evalStmt->get_result();
-if ($evalResult->num_rows > 0) {
-    while ($row = $evalResult->fetch_assoc()) {
-        $evaluatedEmployees[] = $row['e_id'];
-    }
-}
-
-// Fetch evaluation questions from the database for each category
-$categories = ['Quality of Work', 'Communication Skills', 'Teamwork', 'Punctuality', 'Initiative'];
-$questions = [];
-
-foreach ($categories as $category) {
-    $categorySql = "SELECT question FROM evaluation_questions WHERE category = ?";
-    $categoryStmt = $conn->prepare($categorySql);
-    $categoryStmt->bind_param('s', $category);
-    $categoryStmt->execute();
-    $categoryResult = $categoryStmt->get_result();
-    $questions[$category] = [];
-
-    if ($categoryResult->num_rows > 0) {
-        while ($row = $categoryResult->fetch_assoc()) {
-            $questions[$category][] = $row['question'];
-        }
-    }
-}
-
-// Check if any records are found
-$employees = [];
+// Check if evaluations exist
 if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        // Exclude the logged-in employee from the list
-        if ($row['e_id'] != $employeeId) {
-            $employees[] = $row;
-        }
-    }
+    $evaluation = $result->fetch_assoc();
+} else {
+    echo "No evaluations found.";
+    exit;
 }
 
-// Close the database connection
+$stmt->close();
 $conn->close();
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluation</title>
-    <link href="../../css/styles.css" rel="stylesheet">
-    <link href="../../css/star.css" rel="stylesheet">
+    <title>Evaluation Result | HR2</title>
+    <link href="../../css/styles.css" rel="stylesheet" />
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href="../../css/calendar.css" rel="stylesheet"/>
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+<body class="sb-nav-fixed bg-black">
+   <?php include 'navbar.php'; ?>
+    <div id="layoutSidenav">
+    <?php include 'sidebar.php'; ?>
+        <div id="layoutSidenav_content">
+            <main class="bg-black">
+                <div class="container-fluid position-relative px-4">
+                    <h1 class="big mb-4 text-light">Evaluation Rating</h1>
+                    <div class="container" id="calendarContainer" 
+                    style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050; 
+                        width: 80%; height: 80%; display: none;">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div id="calendar" class="p-2"></div>
+                            </div>
+                        </div>
+                    </div>   
+                    <div class="card bg-black text-light py-4">
+                        
+                        <div class="bg-dark bordered">
+                            <canvas id="evaluationChart" width="700" height="400"></canvas>
+                        </div>
 
-<body class="bg-dark text-light">
-    <div class="container mt-5">
-        <h2 class="text-center text-light mb-4"><?php echo $department; ?></h2>
-        <div class="table-responsive">
-            <table class="table table-striped table-hover text-light">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>Position</th>
-                        <th>Role</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($employees)): ?>
-                        <?php foreach ($employees as $employee): ?>
-                            <tr>
-                                <td class="text-light"><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></td>
-                                <td class="text-light"><?php echo htmlspecialchars($employee['position']); ?></td>
-                                <td class="text-light"><?php echo htmlspecialchars($employee['role']); ?></td>
-                                <td>
-                                    <button class="btn btn-success" 
-                                        onclick="evaluateEmployee(<?php echo $employee['e_id']; ?>, '<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')"
-                                        <?php echo in_array($employee['e_id'], $evaluatedEmployees) ? 'disabled' : ''; ?>>
-                                        <?php echo in_array($employee['e_id'], $evaluatedEmployees) ? 'Evaluated' : 'Evaluate'; ?>
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td class="text-light text-center" colspan="4">No employees found for evaluation in <?php echo $department; ?>.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        <table class="table table-bordered mt-3 text-light table-dark">
+                            <thead>
+                                <tr class="text-center">
+                                    <th>Category</th>
+                                    <th>Average Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-start">
+                                <tr>
+                                    <td>Quality of Work</td>
+                                    <td><?php echo htmlspecialchars(number_format($evaluation['avg_quality'], 2)); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Communication Skills</td>
+                                    <td><?php echo htmlspecialchars(number_format($evaluation['avg_communication_skills'], 2)); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Teamwork</td>
+                                    <td><?php echo htmlspecialchars(number_format($evaluation['avg_teamwork'], 2)); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Punctuality</td>
+                                    <td><?php echo htmlspecialchars(number_format($evaluation['avg_punctuality'], 2)); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Initiative</td>
+                                    <td><?php echo htmlspecialchars(number_format($evaluation['avg_initiative'], 2)); ?></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content bg-dark text-light">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to log out?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="../../employee/logout.php" method="POST">
+                                        <button type="submit" class="btn btn-danger">Logout</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>  
+                </div>
+            </main>
+            <?php include 'footer.php'; ?>
         </div>
     </div>
-    <div class="modal fade" id="evaluationModal" tabindex="-1" role="dialog" aria-labelledby="evaluationModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content bg-dark text-light">
-                <div class="modal-header text-white">
-                    <h5 class="modal-title" id="employeeDetails"></h5>
-                    <button type="button" class="close btn btn-secondary" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="e_id" value="<?php echo $_SESSION['e_id']; ?>">
-                    <div id="questions"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="submitEvaluation()">Submit</button>
+        <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-transparent border-0">
+                    <div class="modal-body d-flex flex-column align-items-center justify-content-center">
+                        <!-- Bouncing coin spinner -->
+                        <div class="coin-spinner"></div>
+                        <div class="mt-3 text-light fw-bold">Please wait...</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        let currentEmployeeId;
-        let currentEmployeeName;  
-        let currentEmployeePosition; 
 
-        // The categories and questions fetched from the PHP script
-        const questions = <?php echo json_encode($questions); ?>;
+    //EVALUATION
+    const ctx = document.getElementById('evaluationChart').getContext('2d');
+    const chartData = {
+        labels: [
+            'Quality of Work', 
+            'Communication Skills', 
+            'Teamwork', 
+            'Punctuality', 
+            'Initiative'
+        ],
+        datasets: [{
+            label: 'Average Ratings',
+            data: [
+                <?php echo htmlspecialchars(number_format($evaluation['avg_quality'], 2)); ?>,
+                <?php echo htmlspecialchars(number_format($evaluation['avg_communication_skills'], 2)); ?>,
+                <?php echo htmlspecialchars(number_format($evaluation['avg_teamwork'], 2)); ?>,
+                <?php echo htmlspecialchars(number_format($evaluation['avg_punctuality'], 2)); ?>,
+                <?php echo htmlspecialchars(number_format($evaluation['avg_initiative'], 2)); ?>
+            ],
+            backgroundColor: [
+                'rgba(75, 192, 192, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(75, 192, 192, 1)'
+            ],
+            borderColor: [
+                'rgba(75, 192, 192, 2)',
+                'rgba(75, 192, 192, 2)',
+                'rgba(75, 192, 192, 2)',
+                'rgba(75, 192, 192, 2)',
+                'rgba(75, 192, 192, 2)'
+            ],
+            borderWidth: 1
+        }]
+    };
 
-        function evaluateEmployee(e_id, employeeName, employeePosition) {
-            currentEmployeeId = e_id; 
-            currentEmployeeName = employeeName; 
-            currentEmployeePosition = employeePosition; 
-
-            const employeeDetails = `<strong>Name: ${employeeName} <br> Position: ${employeePosition}</strong>`;
-            document.getElementById('employeeDetails').innerHTML = employeeDetails;
-
-            const questionsDiv = document.getElementById('questions');
-            questionsDiv.innerHTML = ''; 
-
-            // Start the table structure
-            let tableHtml = `
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Question</th>
-                        <th>Rating</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            // Loop through categories and questions to add them into the table
-            for (const [category, categoryQuestions] of Object.entries(questions)) {
-                categoryQuestions.forEach((question, index) => {
-                    const questionName = `${category.replace(/\s/g, '')}q${index}`; // Unique name per question
-                    tableHtml += `
-                    <tr>
-                        <td>${index === 0 ? category : ''}</td>
-                        <td>${question}</td>
-                        <td>
-                            <div class="star-rating">
-                                ${[6, 5, 4, 3, 2, 1].map(value => `
-                                    <input type="radio" name="${questionName}" value="${value}" id="${questionName}star${value}">
-                                    <label for="${questionName}star${value}">&#9733;</label>
-                                `).join('')}
-                            </div>
-                        </td>
-                    </tr>`;
-                });
-            }
-
-            // Close the table structure
-            tableHtml += `
-                </tbody>
-            </table>`;
-
-            questionsDiv.innerHTML = tableHtml;
-
-            $('#evaluationModal').modal('show'); 
-        }
-
-        function submitEvaluation() {
-            const evaluations = [];
-            const questionsDiv = document.getElementById('questions');
-
-            questionsDiv.querySelectorAll('input[type="radio"]:checked').forEach(input => {
-                evaluations.push({
-                    question: input.name,  
-                    rating: input.value    
-                });
-            });
-
-            const totalQuestions = questionsDiv.querySelectorAll('.star-rating').length;
-
-            if (evaluations.length !== totalQuestions) {
-                alert('Please complete the evaluation before submitting.');
-                return;
-            }
-
-            const categoryAverages = {
-                QualityOfWork: calculateAverage('Quality of Work', evaluations),
-                CommunicationSkills: calculateAverage('Communication Skills', evaluations),
-                Teamwork: calculateAverage('Teamwork', evaluations),
-                Punctuality: calculateAverage('Punctuality', evaluations),
-                Initiative: calculateAverage('Initiative', evaluations)
-            };
-
-            console.log('Category Averages:', categoryAverages);
-
-            const employeeId = document.getElementById('e_id').value;
-            const department = 'employeeistration Department';
-
-            $.ajax({
-                type: 'POST',
-                url: '../db/submit_evaluation.php',
-                data: {
-                    e_id: currentEmployeeId,
-                    employeeName: currentEmployeeName,
-                    employeePosition: currentEmployeePosition,
-                    categoryAverages: categoryAverages,
-                    employeeId: employeeId,
-                    department: department  
-                },
-                success: function (response) {
-                    console.log(response); 
-                    if (response === 'You have already evaluated this employee.') {
-                        alert(response); 
-                    } else {
-                        $('#evaluationModal').modal('hide');
-                        alert('Evaluation submitted successfully!');
+    const myChart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 6,
+                    grid: {
+                        color: '#495057', // Customize Y-axis grid line color
+                        lineWidth: 1 // Customize grid line thickness
+                    },
+                    ticks: {
+                        color: '#6c757d', // Customize Y-axis label color
+                        font: {
+                            size: 14 // Customize Y-axis label font size
+                        }
                     }
                 },
-                error: function (err) {
-                    console.error(err);
-                    alert('An error occurred while submitting the evaluation.');
+                x: {
+                    grid: {
+                        color: '#495057', // Customize X-axis grid line color
+                        lineWidth: 1 // Customize grid line thickness
+                    },
+                    ticks: {
+                        color: '#f8f9fa', // Customize X-axis label color
+                        font: {
+                            size: 14 // Customize X-axis label font size
+                        }
+                    }
                 }
-            });
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#f8f9fa', // Customize legend label color
+                        font: {
+                            size: 14 // Customize legend label font size
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: false
         }
-
-        function calculateAverage(category, evaluations) {
-            const categoryEvaluations = evaluations.filter(evaluation => evaluation.question.startsWith(category.replace(/\s/g, '')));
-
-            if (categoryEvaluations.length === 0) {
-                return 0; 
-            }
-
-            const total = categoryEvaluations.reduce((sum, evaluation) => sum + parseInt(evaluation.rating), 0);
-            return total / categoryEvaluations.length;
-        }
-
+    });
+        //EVALUATION END
     </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="../../js/employee.js"></script>
 </body>
-
 </html>

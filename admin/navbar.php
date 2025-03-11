@@ -120,15 +120,17 @@
 
             <!-- Notification Bell -->
             <div class="dropdown ms-3 d-none d-md-inline-block form-inline">
-                <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-bell text-light fs-2"></i>
-                    <span class="badge bg-danger" id="notificationCount">0</span> <!-- Notification Count -->
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end mt-3" aria-labelledby="notificationDropdown" id="notificationList" style="width: 400px;">
-                    <li><a class="dropdown-item" href="#">No new notifications</a></li>
-                </ul>
-            </div>
-        </div>
+    <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell text-light fs-2"></i>
+        <span class="badge bg-danger" id="notificationCount">0</span> <!-- Notification Count -->
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end mt-3" aria-labelledby="notificationDropdown" id="notificationList" style="width: 400px;">
+        <li><a class="dropdown-item" href="#">No new notifications</a></li>
+    </ul>
+</div>
+        <div id="notification-list">
+    <!-- Notifications will be dynamically inserted here -->
+</div>
     </nav>
 
     <script>
