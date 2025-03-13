@@ -236,7 +236,8 @@
             { name: "Leave Request", link: "../../employee/supervisor/leave_request.php", path: "Leave Management/Leave Request" },
             { name: "Evaluation Ratings", link: "../../employee/supervisor/evaluation.php", path: "Performance Management/Evaluation Ratings" },
             { name: "File Leave", link: "../../employee/supervisor/leave_file.php", path: "Leave Management/File Leave" },
-            { name: "View Your Rating", link: "../../employee/supervisor/social_recognition.php", path: "Social Recognition/View Your Rating" },
+            { name: "Awardee", link: "../../employee/supervisor/awardee.php", path: "Social Recognition/Awardee" },
+            { name: "Profile", link: "../../employee/supervisor/profile.php", path: "Profile" },
             { name: "Report Issue", link: "../../employee/supervisor/report_issue.php", path: "Feedback/Report Issue" }
         ];
 

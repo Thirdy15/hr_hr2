@@ -170,24 +170,23 @@ function getTopEmployeesByCriterion($conn, $criterion, $criterionLabel, $index) 
                             </div>
                         </div>
                         <!-- Add buttons for comments and reactions -->
-                        <div class='comment-reaction-buttons'>
+                    <div class='comment-reaction-buttons'>
                         <button id="comment-button-<?php echo $row['e_id']; ?>" class='btn btn-primary comment-btn' onclick='openCommentModal(<?php echo $row['e_id']; ?>)'>
                             <i class="bi bi-chat-dots-fill me-1"></i> Comments (<span id="comment-count-<?php echo $row['e_id']; ?>">0</span>)
                         </button>
-                            <div class='comment-input-container'>
+                        <div class='comment-input-container'>
                             <button class="btn btn-primary react-btn" id="react-button-<?php echo $row['e_id']; ?>" onclick='showReactions(this, <?php echo $row['e_id']; ?>)'>
                                 <i class="bi bi-emoji-smile-fill me-1"></i> React (<span id="reaction-count-<?php echo $row['e_id']; ?>">0</span>)
                             </button>
                             <div id='reaction-menu-<?php echo $row['e_id']; ?>' class='reaction-dropdown'>
-                                    <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
-                                    <button onclick='selectReaction("❤️ Heart", <?php echo $row['e_id']; ?>)'>❤️</button>
-                                    <button onclick='selectReaction("😎 Awesome", <?php echo $row['e_id']; ?>)'>😎</button>
-                                    <button onclick='selectReaction("😮 Wow", <?php echo $row['e_id']; ?>)'>😮</button>
-                                    <button class='close-btn' onclick='closeReactions(<?php echo $row['e_id']; ?>)'>Close</button>
-                               </div>
+                                <button onclick='selectReaction("👍 Like", <?php echo $row['e_id']; ?>)'>👍</button>
+                                <button onclick='selectReaction("❤️ Heart", <?php echo $row['e_id']; ?>)'>❤️</button>
+                                <button onclick='selectReaction("😎 Awesome", <?php echo $row['e_id']; ?>)'>😎</button>
+                                <button onclick='selectReaction("😮 Wow", <?php echo $row['e_id']; ?>)'>😮</button>
+                                <button class='close-btn' onclick='closeReactions(<?php echo $row['e_id']; ?>)'>Close</button>
                             </div>
                         </div>
-
+                    </div>
                     </div>
                     <!-- Right metrics -->
                     <div class='metrics-column'>
@@ -759,8 +758,18 @@ function getComments($conn, $employeeId) {
         .comment-reaction-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 10px;
-            height: 3rem;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .comment-reaction-buttons .comment-btn,
+        .comment-reaction-buttons .react-btn {
+            display: flex;
+            align-items: center;
+            padding: 1px;
+            font-size: 1rem;
+            border-radius: 20px;
+            height: 40px; /* Adjust height to match */
         }
 
         .comment-reaction-buttons .react-btn {
@@ -771,13 +780,39 @@ function getComments($conn, $employeeId) {
             display: block;
         }
 
-        .comment-btn {
-            padding: -10px; /* Adjust padding to make the button smaller */
-            font-size: 1rem;    /* Adjust font size to make the text smaller */
-            line-height: 5px;       /* Adjust line height for better alignment */
-            border-radius: 1rem; /* Optional: Adjust border radius for a more rounded look */
-
+        .reaction-dropdown {
+            display: none;
+            position: absolute;
+            background-color: #343a40;
+            border-radius: 30px;
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            transform: translateY(-100%);
+            left: 0;
+            top: -10px;
         }
+
+        .reaction-dropdown.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .reaction-dropdown button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            margin: 0 5px;
+            transition: transform 0.2s;
+        }
+
+        .reaction-dropdown button:hover {
+            transform: scale(1.2);
+        }
+
         /* Modern Comment Modal Styling */
         .modal-right {
             position: fixed;
@@ -865,6 +900,32 @@ function getComments($conn, $employeeId) {
             color: rgba(255, 255, 255, 0.5);
         }
 
+        .comment-input-container .comment-post-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0d6efd;
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-input-container .comment-post-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        .comment-input-container .comment-post-btn i {
+            font-size: 16px;
+        }
+
         .comment-list {
             display: flex;
             flex-direction: column;
@@ -919,70 +980,6 @@ function getComments($conn, $employeeId) {
 
         .comment-action:hover {
             color: white;
-        }
-
-        .comment-post-btn {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #0d6efd;
-            border: none;
-            color: white;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .comment-post-btn:hover {
-            background-color: #0b5ed7;
-        }
-
-        .comment-post-btn i {
-            font-size: 16px;
-        }
-
-        /* Reaction dropdown styling */
-        .reaction-dropdown {
-            display: none;
-            position: absolute;
-            background-color: #343a40;
-            border-radius: 30px;
-            padding: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            transform: translateY(-100%);
-            left: 0;
-            top: -10px;
-        }
-
-        .reaction-dropdown.show {
-            display: flex;
-            opacity: 1;
-        }
-
-        .reaction-dropdown button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 20px;
-            margin: 0 5px;
-            transition: transform 0.2s;
-        }
-
-        .reaction-dropdown button:hover {
-            transform: scale(1.2);
-        }
-
-        .react-btn {
-            position: relative;
         }
 
         .navigation-buttons {
@@ -1065,9 +1062,6 @@ function getComments($conn, $employeeId) {
                 <?php getTopEmployeesByCriterion($conn, 'initiative', 'Initiative', 5); ?>
                 <?php getAllEmployees($conn); ?>
 
-                <!-- Navigation buttons for manually controlling the categories -->
-
-            </div>
         </main>
             <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -1184,6 +1178,41 @@ function getComments($conn, $employeeId) {
         });
     });
 
+    let currentCategoryIndex = 1;
+    const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
+    let currentEmployeeIndex = {};
+
+    function showNextEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    function showPreviousEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    window.onload = function() {
+        // Show the first category and first employee immediately
+        document.getElementById(`category-1`).style.display = 'block';
+        document.getElementById(`employee-1-1`).style.display = 'block';
+
+        // Auto display all employees
+        document.getElementById(`employee-all-1`).style.display = 'block';
+    };
+
     function showNextCategory() {
         // Hide the current category
         document.getElementById(`category-${currentCategoryIndex}`).style.display = 'none';
@@ -1268,100 +1297,99 @@ function getComments($conn, $employeeId) {
         menu.classList.toggle('show');
     }
 
-    
     // Function to save a reaction and trigger a notification
-// Function to save a reaction and trigger a notification
-function selectReaction(reaction, employeeId) {
-    fetch('save_reaction.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            employee_id: employeeId,
-            reaction: reaction
+    function selectReaction(reaction, employeeId) {
+        fetch('save_reaction.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                employee_id: employeeId,
+                reaction: reaction
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert('Reaction saved: ' + reaction);
-            closeReactions(employeeId);
-            updateReactionCount(employeeId);
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Reaction saved: ' + reaction);
+                closeReactions(employeeId);
+                updateReactionCount(employeeId);
 
-            // Send a notification after saving the reaction
-            sendNotification(employeeId, reaction);
-        } else {
-            alert('Failed to save reaction');
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-// Function to send a notification
-function sendNotification(employeeId, reaction) {
-    fetch('../db/fetchnotif.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            employee_id: employeeId,
-            reaction: reaction
+                // Send a notification after saving the reaction
+                sendNotification(employeeId, reaction);
+            } else {
+                alert('Failed to save reaction');
+            }
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Notification sent successfully');
-            // Add the new notification to the notification dropdown
-            addNotificationToDropdown(data.notification);
-        } else {
-            console.error('Failed to send notification:', data.error);
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
+        .catch(error => console.error('Error:', error));
+    }
 
-// Function to add a new notification to the dropdown
-function addNotificationToDropdown(notification) {
-    const notificationList = document.getElementById('notificationList');
+    // Function to send a notification
+    function sendNotification(employeeId, reaction) {
+        fetch('../db/fetchnotif.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                employee_id: employeeId,
+                reaction: reaction
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Notification sent successfully');
+                // Add the new notification to the notification dropdown
+                addNotificationToDropdown(data.notification);
+            } else {
+                console.error('Failed to send notification:', data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
 
-    // Create a new notification item
-    const listItem = document.createElement('li');
-    listItem.innerHTML = `
-        <a class="dropdown-item" href="#">
-            <div class="d-flex justify-content-between">
-                <span>${notification.message}</span>
-                <small class="text-muted">${new Date(notification.created_at).toLocaleString()}</small>
-            </div>
-            <div class="d-flex justify-content-end mt-2">
-                <button class="btn btn-sm btn-danger delete-notification" data-id="${notification.notification_id}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </a>`;
+    // Function to add a new notification to the dropdown
+    function addNotificationToDropdown(notification) {
+        const notificationList = document.getElementById('notificationList');
 
-    // Add the new notification at the top of the list
-    notificationList.insertBefore(listItem, notificationList.firstChild);
+        // Create a new notification item
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+            <a class="dropdown-item" href="#">
+                <div class="d-flex justify-content-between">
+                    <span>${notification.message}</span>
+                    <small class="text-muted">${new Date(notification.created_at).toLocaleString()}</small>
+                </div>
+                <div class="d-flex justify-content-end mt-2">
+                    <button class="btn btn-sm btn-danger delete-notification" data-id="${notification.notification_id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </a>`;
 
-    // Update the notification count
-    const notificationCount = document.getElementById('notificationCount');
-    const currentCount = parseInt(notificationCount.textContent, 10);
-    notificationCount.textContent = currentCount + 1;
-}
+        // Add the new notification at the top of the list
+        notificationList.insertBefore(listItem, notificationList.firstChild);
+
+        // Update the notification count
+        const notificationCount = document.getElementById('notificationCount');
+        const currentCount = parseInt(notificationCount.textContent, 10);
+        notificationCount.textContent = currentCount + 1;
+    }
+
     // Function to open the comment modal with animation
     function openCommentModal(employeeId) {
-    const modal = document.getElementById('commentModal');
-    modal.style.display = 'flex';
-    modal.classList.add('show');
+        const modal = document.getElementById('commentModal');
+        modal.style.display = 'flex';
+        modal.classList.add('show');
 
-    // Add employee ID to the modal for reference
-    modal.setAttribute('data-employee-id', employeeId);
+        // Add employee ID to the modal for reference
+        modal.setAttribute('data-employee-id', employeeId);
 
-    // Fetch and display existing comments and update the comment count
-    fetchComments(employeeId);
-}
+        // Fetch and display existing comments and update the comment count
+        fetchComments(employeeId);
+    }
 
     // Function to close the comment modal
     function closeModal(modalId) {
@@ -1379,187 +1407,154 @@ function addNotificationToDropdown(notification) {
     }
 
    // Function to fetch and display comments with time ago format
-function fetchComments(employeeId) {
-    fetch('fetch_comments.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ employee_id: employeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const commentList = document.querySelector('.modal-body .comment-list');
-        commentList.innerHTML = ''; // Clear existing comments
-
-        if (data.comments && data.comments.length > 0) {
-            data.comments.forEach(comment => {
-                // Calculate time ago using the getTimeAgo function
-                const timeAgo = getTimeAgo(comment.created_at);
-
-                // Create comment element
-                const commentElement = document.createElement('div');
-                commentElement.classList.add('comment');
-
-                commentElement.innerHTML = `
-                    <div class="comment-header">
-                        <span class="comment-author">${comment.username || 'Anonymous'}</span>
-                        <span class="comment-time">${timeAgo}</span>
-                    </div>
-                    <div class="comment-content">${comment.comment}</div>
-                    <div class="comment-actions">
-                        <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
-                        <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
-                    </div>
-                `;
-
-                commentList.appendChild(commentElement);
-            });
-
-            // Update the comment count
-            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
-            if (commentCountElement) {
-                commentCountElement.textContent = data.total_comments;
-            }
-        } else {
-            // Show empty state
-            const emptyState = document.createElement('div');
-            emptyState.classList.add('empty-comments');
-            emptyState.innerHTML = `
-                <i class="bi bi-chat-square-text"></i>
-                <p>No comments yet. Be the first to comment!</p>
-            `;
-            commentList.appendChild(emptyState);
-
-            // Update the comment count to 0
-            const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
-            if (commentCountElement) {
-                commentCountElement.textContent = 0;
-            }
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-// Function to calculate time ago
-function getTimeAgo(date) {
-    const now = new Date();
-    const past = new Date(date); // Ensure 'date' is a Date object
-    const seconds = Math.floor((now - past) / 1000);
-    
-    let interval = Math.floor(seconds / 31536000);
-    if (interval >= 1) return interval === 1 ? '1 year ago' : interval + ' years ago';
-
-    interval = Math.floor(seconds / 2592000);
-    if (interval >= 1) return interval === 1 ? '1 month ago' : interval + ' months ago';
-
-    interval = Math.floor(seconds / 86400);
-    if (interval >= 1) return interval === 1 ? '1 day ago' : interval + ' days ago';
-
-    interval = Math.floor(seconds / 3600);
-    if (interval >= 1) return interval === 1 ? '1 hour ago' : interval + ' hours ago';
-
-    interval = Math.floor(seconds / 60);
-    if (interval >= 1) return interval === 1 ? '1 minute ago' : interval + ' minutes ago';
-
-    return seconds < 10 ? 'just now' : seconds + ' seconds ago';
-}
-
-// Example usage
-console.log(getTimeAgo("2024-02-22 14:30:00")); // Output: "X hours ago" or similar
-console.log(getTimeAgo(new Date() - 5000)); // Output: "5 seconds ago"
-    // Function to post a comment
-    function postComment(event, input) {
-    if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
-        const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
-        const comment = input.value.trim();
-
-        fetch('save_comments.php', {
+    function fetchComments(employeeId) {
+        fetch('fetch_comments.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                employee_id: employeeId,
-                comment: comment
-            })
+            body: JSON.stringify({ employee_id: employeeId })
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'success') {
-                // Add the comment to the UI
-                const commentList = document.querySelector('.modal-body .comment-list');
+            const commentList = document.querySelector('.modal-body .comment-list');
+            commentList.innerHTML = ''; // Clear existing comments
 
-                // Remove empty state if it exists
-                const emptyState = commentList.querySelector('.empty-comments');
-                if (emptyState) {
-                    emptyState.remove();
+            if (data.comments && data.comments.length > 0) {
+                data.comments.forEach(comment => {
+                    // Calculate time ago using the getTimeAgo function
+                    const timeAgo = getTimeAgo(comment.created_at);
+
+                    // Create comment element
+                    const commentElement = document.createElement('div');
+                    commentElement.classList.add('comment');
+
+                    commentElement.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${comment.username || 'Anonymous'}</span>
+                            <span class="comment-time">${timeAgo}</span>
+                        </div>
+                        <div class="comment-content">${comment.comment}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                        </div>
+                    `;
+
+                    commentList.appendChild(commentElement);
+                });
+
+                // Update the comment count
+                const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+                if (commentCountElement) {
+                    commentCountElement.textContent = data.total_comments;
                 }
-
-                const commentElement = document.createElement('div');
-                commentElement.classList.add('comment');
-
-                commentElement.innerHTML = `
-                    <div class="comment-header">
-                        <span class="comment-author">${data.username || 'You'}</span>
-                        <span class="comment-time">just now</span>
-                    </div>
-                    <div class="comment-content">${comment}</div>
-                    <div class="comment-actions">
-                        <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
-                        <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
-                    </div>
-                `;
-
-                // Add new comment at the top
-                commentList.insertBefore(commentElement, commentList.firstChild);
-
-                input.value = ''; // Clear the input field
-
-                // Refresh the comment count
-                fetchComments(employeeId);
             } else {
-                alert('Failed to save comment');
+                // Show empty state
+                const emptyState = document.createElement('div');
+                emptyState.classList.add('empty-comments');
+                emptyState.innerHTML = `
+                    <i class="bi bi-chat-square-text"></i>
+                    <p>No comments yet. Be the first to comment!</p>
+                `;
+                commentList.appendChild(emptyState);
+
+                // Update the comment count to 0
+                const commentCountElement = document.getElementById(`comment-count-${employeeId}`);
+                if (commentCountElement) {
+                    commentCountElement.textContent = 0;
+                }
             }
         })
         .catch(error => console.error('Error:', error));
     }
-}
-    let currentCategoryIndex = 1;
-    const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
-    let currentEmployeeIndex = {};
 
-    function showNextEmployee(categoryIndex) {
-        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-        if (!currentEmployeeIndex[categoryIndex]) {
-            currentEmployeeIndex[categoryIndex] = 1;
-        }
+    // Function to calculate time ago
+    function getTimeAgo(date) {
+        const now = new Date();
+        const past = new Date(date); // Ensure 'date' is a Date object
+        const seconds = Math.floor((now - past) / 1000);
 
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+        let interval = Math.floor(seconds / 31536000);
+        if (interval >= 1) return interval === 1 ? '1 year ago' : interval + ' years ago';
+
+        interval = Math.floor(seconds / 2592000);
+        if (interval >= 1) return interval === 1 ? '1 month ago' : interval + ' months ago';
+
+        interval = Math.floor(seconds / 86400);
+        if (interval >= 1) return interval === 1 ? '1 day ago' : interval + ' days ago';
+
+        interval = Math.floor(seconds / 3600);
+        if (interval >= 1) return interval === 1 ? '1 hour ago' : interval + ' hours ago';
+
+        interval = Math.floor(seconds / 60);
+        if (interval >= 1) return interval === 1 ? '1 minute ago' : interval + ' minutes ago';
+
+        return seconds < 10 ? 'just now' : seconds + ' seconds ago';
     }
 
-    function showPreviousEmployee(categoryIndex) {
-        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-        if (!currentEmployeeIndex[categoryIndex]) {
-            currentEmployeeIndex[categoryIndex] = 1;
+    // Example usage
+    console.log(getTimeAgo("2024-02-22 14:30:00")); // Output: "X hours ago" or similar
+    console.log(getTimeAgo(new Date() - 5000)); // Output: "5 seconds ago"
+
+    // Function to post a comment
+    function postComment(event, input) {
+        if ((event.key === 'Enter' || event.type === 'click') && input.value.trim() !== '') {
+            const employeeId = document.getElementById('commentModal').getAttribute('data-employee-id');
+            const comment = input.value.trim();
+
+            fetch('save_comments.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    employee_id: employeeId,
+                    comment: comment
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Add the comment to the UI
+                    const commentList = document.querySelector('.modal-body .comment-list');
+
+                    // Remove empty state if it exists
+                    const emptyState = commentList.querySelector('.empty-comments');
+                    if (emptyState) {
+                        emptyState.remove();
+                    }
+
+                    const commentElement = document.createElement('div');
+                    commentElement.classList.add('comment');
+
+                    commentElement.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${data.username || 'You'}</span>
+                            <span class="comment-time">just now</span>
+                        </div>
+                        <div class="comment-content">${comment}</div>
+                        <div class="comment-actions">
+                            <span class="comment-action"><i class="bi bi-hand-thumbs-up"></i> Like</span>
+                            <span class="comment-action"><i class="bi bi-reply"></i> Reply</span>
+                        </div>
+                    `;
+
+                    // Add new comment at the top
+                    commentList.insertBefore(commentElement, commentList.firstChild);
+
+                    input.value = ''; // Clear the input field
+
+                    // Refresh the comment count
+                    fetchComments(employeeId);
+                } else {
+                    alert('Failed to save comment');
+                }
+            })
+            .catch(error => console.error('Error:', error));
         }
-
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
     }
-
-    window.onload = function() {
-        // Show the first category and first employee immediately
-        document.getElementById(`category-1`).style.display = 'block';
-        document.getElementById(`employee-1-1`).style.display = 'block';
-
-        // Auto display all employees
-        document.getElementById(`employee-all-1`).style.display = 'block';
-    };
-
+    
     document.addEventListener('DOMContentLoaded', function () {
         const commentList = document.querySelector('.comment-list');
 
@@ -1581,25 +1576,25 @@ console.log(getTimeAgo(new Date() - 5000)); // Output: "5 seconds ago"
 
     // Function to update the reaction count
     function updateReactionCount(employeeId) {
-    fetch('fetch_reaction_count.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ employee_id: employeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Update the reaction count in the UI
-            const reactionCountElement = document.getElementById(`reaction-count-${employeeId}`);
-            reactionCountElement.textContent = data.count;
-        } else {
-            console.error('Failed to fetch reaction count');
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
+        fetch('fetch_reaction_count.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ employee_id: employeeId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update the reaction count in the UI
+                const reactionCountElement = document.getElementById(`reaction-count-${employeeId}`);
+                reactionCountElement.textContent = data.count;
+            } else {
+                console.error('Failed to fetch reaction count');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
 </script>
 <!-- Add these lines to your HTML to include the new PHP files -->
 <script src="fetch_comments.php"></script>

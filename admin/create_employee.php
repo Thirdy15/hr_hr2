@@ -43,7 +43,7 @@
             border: 1px solid #333;
             transition: transform 0.3s, box-shadow 0.3s;
         }
-       
+
         .card-header, .card-footer {
             background-color: #2c2c2c;
             border-color: #555 !important;
@@ -57,7 +57,7 @@
             border-color: #333;
             transition: background-color 0.3s, border-color 0.3s;
         }
-       
+
         .video-container {
             display: flex;
             justify-content: center;
@@ -76,7 +76,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s;
         }
-       
+
         footer {
             background-color: #1f1f1f;
             border-top: 1px solid #333;
@@ -258,6 +258,7 @@
     <script>
         // Flag to check if models are loaded
         let modelsLoaded = false;
+        let faceDetectionActive = false;
 
         // Load the face recognition models
         async function loadModels() {
@@ -327,7 +328,9 @@
 
                 // Wait for the video to play before starting face detection
                 video.addEventListener('play', () => {
+                    faceDetectionActive = true;
                     detectFace(video);
+                    document.body.style.overflow = 'hidden'; // Disable scrolling
                 });
             } catch (error) {
                 // Handle possible errors
@@ -345,8 +348,7 @@
 
         // Function to detect and capture face from the video feed
         async function detectFace(video) {
-            if (!modelsLoaded) {
-                alert("Models are not loaded yet. Please wait.");
+            if (!modelsLoaded || !faceDetectionActive) {
                 return;
             }
 
@@ -376,7 +378,9 @@
             }
 
             // Request the next animation frame for continuous face detection
-            requestAnimationFrame(() => detectFace(video));
+            if (faceDetectionActive) {
+                requestAnimationFrame(() => detectFace(video));
+            }
         }
 
         // Attach event listeners for buttons
@@ -390,6 +394,10 @@
             link.href = dataUrl;
             link.download = 'captured-face.png';
             link.click();
+
+            // Stop face detection loop
+            faceDetectionActive = false;
+            document.body.style.overflow = ''; // Enable scrolling
         });
 
         const positionsByDepartment = {

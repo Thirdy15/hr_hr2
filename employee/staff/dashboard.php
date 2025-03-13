@@ -9,6 +9,13 @@ include '../../db/db_conn.php';
 
 $employeeId = $_SESSION['e_id'];
 $employeePosition = $_SESSION['position'];
+
+// Fetch notifications for the employee
+$notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
+$notificationStmt = $conn->prepare($notificationQuery);
+$notificationStmt->bind_param("i", $employeeId);
+$notificationStmt->execute();
+$notifications = $notificationStmt->get_result();
 // Fetch the average of the employee's evaluations
 $sql = "SELECT 
             AVG(quality) AS avg_quality, 
@@ -56,7 +63,6 @@ $conn->close();
 $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../img/defaultpfp.png';
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,58 +72,18 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
     <meta name="description" content="" />
     <meta name="author" content="" />
     <title>Employee Dashboard | HR2</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <link href="../../css/styles.css" rel="stylesheet" />
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
-
-    <style>
-        .collapse {
-            transition: width 3s ease;
-        }
-
-        #searchInput.collapsing {
-            width: 0;
-        }
-
-        #searchInput.collapse.show {
-            width: 250px; /* Adjust the width as needed */
-        }
-
-        .search-bar {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        #search-results {
-            position: absolute;
-            width: 100%;
-            z-index: 1000;
-            display: none; /* Hidden by default */
-        }
-
-        #search-results a {
-            text-decoration: none;
-        }
-
-        .form-control:focus + #search-results {
-            display: block; /* Show the results when typing */
-        }
-        
-
-          /* CSS for background blur */
-  .blur-background {
-    filter: blur(8px); /* You can adjust the blur strength */
-    transition: filter 0.3s ease;
-  }
-    </style>
 </head>
+
 <body class="sb-nav-fixed bg-black">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
-       <?php include 'sidebar.php'; ?>
+        <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
             <main id="main-content">
                 <div class="container-fluid position-relative px-4">
@@ -128,32 +94,31 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                             </div>
                         </div>
                     </div>
-                    <div class="container" id="calendarContainer" 
-                         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050; 
-                        width: 80%; height: 80%; display: none;">
+                    <div class="container-fluid" id="calendarContainer" 
+                        style="position: fixed; top: 7%; right: 40; z-index: 1050; 
+                        max-width: 100%; display: none;">
                         <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-9 mx-auto">
                                 <div id="calendar" class="p-2"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> 
                     <div class="row mb-2">
                         <div class="col-md-6 mt-2 mb-2">
                             <div class="card bg-dark text-light" style="height: 500px;">
                                 <div class="card-header text-light border-bottom border-1 border-secondary">
-                                    <h3>Attendance</h3> <!-- Month and Year display -->
+                                    <i class="fas fa-calendar-check me-1"></i> 
+                                    <a class="text-light" href="">Attendance </a>
                                 </div>
                                 <div class="card-body overflow-auto" style="max-height: 400px;">
                                     <div class="d-flex justify-content-between align-items-start mb-0">
                                         <div>
-                                            <h5 class="fw-bold">Today's Date:</h5>
-                                            <a href="../../employee/staff/dashboard.php" id="todaysDate" class="cursor-pointer text-decoration-none">
-                                                <span id="todaysDateContent"></span>
-                                            </a>
+                                            <h5 class="fw-bold d-inline">Today's Date: <a href="../../employee/supervisor/dashboard.php" 
+                                            id="todaysDate" class="cursor-pointer text-decoration-none"><span id="todaysDateContent">Feb 21, 2025</span></a></h5>
                                         </div>
                                         <div>
                                             <h5 class="fw-bold">Time in:</h5>
-                                            <p class="text-warning">08:11 AM</p>
+                                            <p class="text-light">08:11 AM</p>
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -178,253 +143,24 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                                     </div>
                                 </div>
                                 <div class="card-footer text-center d-flex justify-content-around">
-                                    <!-- Footer with Next and Previous buttons -->
-                                    <button class="btn btn-primary" id="prevMonthBtn">&lt; Prev</button>
-                                    <button class="btn btn-primary" id="nextMonthBtn">Next &gt;</button>
+                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-3" id="prevMonthBtn">
+                                        <i class="bi bi-chevron-left"></i> Prev
+                                    </button>
+                                    <button class="btn btn-primary d-flex align-items-center px-4 py-2 rounded-3" id="nextMonthBtn">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mt-2">
+                        <div class="col-md-6 mt-2 mb-2">
                             <div class="card bg-dark">
                                 <div class="card-header text-light border-bottom border-1 border-secondary">
-                                    <h3>Performance Ratings | Graph</h3>
+                                    <i class="fas fa-bar-chart me-1"></i>
+                                    <a class="text-light" href="">Performance Ratings</a>
                                 </div>
                                 <div class="card-body">
-                                    <div class="mt-2">
-                                        <div class="row">
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Quality of Work</h5>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-warning">
-                                                        <?php 
-                                                            // Display rating label based on avg_quality value
-                                                            if ($evaluation['avg_quality'] == 6) {
-                                                                echo "Excellent";
-                                                                $progressBarClass = "bg-success"; // Green for excellent
-                                                            } elseif ($evaluation['avg_quality'] <= 5.99 && $evaluation['avg_quality'] >= 5 ) {
-                                                                echo "Good";
-                                                                $progressBarClass = "bg-primary"; // Blue for good
-                                                            } elseif ($evaluation['avg_quality'] <= 4.99 && $evaluation['avg_quality'] >= 3) {
-                                                                echo "Average";
-                                                                $progressBarClass = "bg-warning"; // Yellow for average
-                                                            } elseif ($evaluation['avg_quality'] <= 2.99 && $evaluation['avg_quality'] >= 0.01) {
-                                                                echo "Need Improvements";
-                                                                $progressBarClass = "bg-danger"; // Red for needs improvement
-                                                            } else {
-                                                                echo "Not Yet Evaluated";
-                                                                $progressBarClass = "bg-light";
-                                                            }                                                                                                    
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                                <div class="progress">
-                                                    <div 
-                                                        class="progress-bar <?php echo $progressBarClass; ?>" 
-                                                        role="progressbar" 
-                                                        style="width: <?php echo min(100, ($evaluation['avg_quality'] / 6) * 100); ?>%;" 
-                                                        aria-valuenow="<?php echo htmlspecialchars($evaluation['avg_quality']); ?>" 
-                                                        aria-valuemin="0" 
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($evaluation['avg_quality'], 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Communication Skills</h5>
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="text-warning">
-                                                            <?php 
-                                                                // Display rating label based on avg_quality value
-                                                                if ($evaluation['avg_communication_skills'] == 6) {
-                                                                    echo "Excellent";
-                                                                    $progressBarClass = "bg-success"; // Green for excellent
-                                                                } elseif ($evaluation['avg_communication_skills'] <= 5.99 && $evaluation['avg_communication_skills'] >= 5) {
-                                                                    echo "Good";
-                                                                    $progressBarClass = "bg-primary"; // Blue for good
-                                                                } elseif ($evaluation['avg_communication_skills'] <= 4.99 && $evaluation['avg_communication_skills'] >= 3) {
-                                                                    echo "Average";
-                                                                    $progressBarClass = "bg-warning"; // Yellow for average
-                                                                } elseif ($evaluation['avg_communication_skills'] <= 2.99 && $evaluation['avg_communication_skills'] >= 0.01) {
-                                                                    echo "Need Improvements";
-                                                                    $progressBarClass = "bg-danger";
-                                                                } else {
-                                                                    echo "Not Yet Evaluated";
-                                                                    $progressBarClass = "bg-light"; // Red for needs improvement
-                                                                }
-                                                            ?>
-                                                        </span>
-                                                    </div>
-                                                <div class="progress">
-                                                    <div 
-                                                        class="progress-bar <?php echo $progressBarClass; ?>" 
-                                                        role="progressbar" 
-                                                        style="width: <?php echo min(100, ($evaluation['avg_communication_skills'] / 6) * 100); ?>%;" 
-                                                        aria-valuenow="<?php echo htmlspecialchars($evaluation['avg_communication_skills']); ?>" 
-                                                        aria-valuemin="0" 
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($evaluation['avg_communication_skills'], 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>   
-                                    <div class="mt-4">
-                                        <div class="row">
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Teamwork</h5>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-warning">
-                                                        <?php 
-                                                            // Display rating label based on avg_quality value
-                                                            if ($evaluation['avg_teamwork'] == 6) {
-                                                                echo "Excellent";
-                                                                $progressBarClass = "bg-success"; // Green for excellent
-                                                            } elseif ($evaluation['avg_teamwork'] <= 5.99 && $evaluation['avg_teamwork'] >= 5) {
-                                                                echo "Good";
-                                                                $progressBarClass = "bg-primary"; // Blue for good
-                                                            } elseif ($evaluation['avg_teamwork'] <= 4.99 && $evaluation['avg_teamwork'] >= 3) {
-                                                                echo "Average";
-                                                                $progressBarClass = "bg-warning"; // Yellow for average
-                                                            } elseif ($evaluation['avg_teamwork'] <= 2.99 && $evaluation['avg_teamwork'] >= 0.01) {
-                                                                echo "Need Improvements";
-                                                                $progressBarClass = "bg-danger";
-                                                            } else {
-                                                                echo "Not Yet Evaluated";
-                                                                $progressBarClass = "bg-light"; // Light gray for not yet evaluated
-                                                            }
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                                <div class="progress">
-                                                    <div 
-                                                        class="progress-bar <?php echo $progressBarClass; ?>" 
-                                                        role="progressbar" 
-                                                        style="width: <?php echo min(100, ($evaluation['avg_teamwork'] / 6) * 100); ?>%;" 
-                                                        aria-valuenow="<?php echo htmlspecialchars($evaluation['avg_teamwork']); ?>" 
-                                                        aria-valuemin="0" 
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($evaluation['avg_teamwork'], 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Punctuality</h5>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-warning">
-                                                        <?php 
-                                                            // Display rating label based on avg_quality value
-                                                            if ($evaluation['avg_punctuality'] == 6) {
-                                                                echo "Excellent";
-                                                                $progressBarClass = "bg-success"; // Green for excellent
-                                                            } elseif ($evaluation['avg_punctuality'] <= 5.99 && $evaluation['avg_punctuality'] >= 5) {
-                                                                echo "Good";
-                                                                $progressBarClass = "bg-primary"; // Blue for good
-                                                            } elseif ($evaluation['avg_punctuality'] <= 4.99 && $evaluation['avg_punctuality'] >= 3) {
-                                                                echo "Average";
-                                                                $progressBarClass = "bg-warning"; // Yellow for average
-                                                            } elseif ($evaluation['avg_punctuality'] <= 2.99 && $evaluation['avg_punctuality'] >= 0.01) {
-                                                                echo "Need Improvements";
-                                                                $progressBarClass = "bg-danger";
-                                                            } else {
-                                                                echo "Not Yet Evaluated";
-                                                                $progressBarClass = "bg-light"; // Red for needs improvement
-                                                            }
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                                <div class="progress">  
-                                                    <div 
-                                                        class="progress-bar <?php echo $progressBarClass; ?>" 
-                                                        role="progressbar" 
-                                                        style="width: <?php echo min(100, ($evaluation['avg_punctuality'] / 6) * 100); ?>%;" 
-                                                        aria-valuenow="<?php echo htmlspecialchars($evaluation['avg_punctuality']); ?>" 
-                                                        aria-valuemin="0" 
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($evaluation['avg_punctuality'], 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Rating 5: Initiative -->
-                                    <div class="mt-4">
-                                        <div class="row">
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Initiative</h5>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-warning">
-                                                        <?php 
-                                                            // Display rating label based on avg_quality value
-                                                            if ($evaluation['avg_initiative'] == 6) {
-                                                                echo "Excellent";
-                                                                $progressBarClass = "bg-success"; // Green for excellent
-                                                            } elseif ($evaluation['avg_initiative'] <= 5.99 && $evaluation['avg_initiative'] >= 5) {
-                                                                echo "Good";
-                                                                $progressBarClass = "bg-primary"; // Blue for good
-                                                            } elseif ($evaluation['avg_initiative'] <= 4.99 && $evaluation['avg_initiative'] >= 3) {
-                                                                echo "Average";
-                                                                $progressBarClass = "bg-warning"; // Yellow for average
-                                                            } elseif ($evaluation['avg_initiative'] <= 2.99 && $evaluation['avg_initiative'] >= 0.01) {
-                                                                echo "Need Improvements";
-                                                                $progressBarClass = "bg-danger";
-                                                            } else {
-                                                                echo "Not Yet Evaluated";
-                                                                $progressBarClass = "bg-light"; // Red for needs improvement
-                                                            }
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                                <div class="progress">
-                                                    <div 
-                                                        class="progress-bar <?php echo $progressBarClass; ?>" 
-                                                        role="progressbar" 
-                                                        style="width: <?php echo min(100, ($evaluation['avg_initiative'] / 6) * 100); ?>%;" 
-                                                        aria-valuenow="<?php echo htmlspecialchars($evaluation['avg_initiative']); ?>" 
-                                                        aria-valuemin="0" 
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($evaluation['avg_initiative'], 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-xl-6">
-                                                <h5 class="text-light">Overall Rating</h5>
-                                                <div class="d-flex justify-content-between">
-                                                    <span class="text-warning">
-                                                        <?php
-                                                        // Display rating label based on totalAverage value
-                                                        if ($totalAverage == 6) {
-                                                            echo "Excellent";
-                                                            $progressBarClass = "bg-success"; // Green for excellent
-                                                        } elseif ($totalAverage <= 5.99 && $totalAverage >= 5) {
-                                                            echo "Good";
-                                                            $progressBarClass = "bg-primary"; // Blue for good
-                                                        } elseif ($totalAverage <= 4.99 && $totalAverage >= 3) {
-                                                            echo "Average";
-                                                            $progressBarClass = "bg-warning"; // Yellow for average
-                                                        } elseif ($totalAverage <= 2.99 && $totalAverage >= 0.01) {
-                                                            echo "Need Improvements";
-                                                            $progressBarClass = "bg-danger"; // Red for needs improvement
-                                                        } else {
-                                                            echo "Not Yet Evaluated";
-                                                            $progressBarClass = "bg-light";
-                                                        }
-                                                        ?>
-                                                    </span>
-                                                </div>
-                                                <div class="progress">
-                                                    <div
-                                                        class="progress-bar <?php echo $progressBarClass; ?>"
-                                                        role="progressbar"
-                                                        style="width: <?php echo min(100, ($totalAverage / 6) * 100); ?>%;"
-                                                        aria-valuenow="<?php echo htmlspecialchars($totalAverage); ?>"
-                                                        aria-valuemin="0"
-                                                        aria-valuemax="6">
-                                                        <?php echo htmlspecialchars(number_format($totalAverage, 2)); ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>               
-                                    </div>
+                                    <!-- Canvas for Radar Chart -->
+                                    <canvas id="performanceRadarChart" width="400" height="400"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -432,7 +168,8 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                         <div class="col-md-12 mt-2 mb-2">
                             <div class="card bg-dark text-light border-0">
                                 <div class="card-header border-bottom border-1 border-secondary">
-                                    <h3 class="mb-0">Top Performers | Graph</h3>
+                                    <i class="fas fa-line-chart me-1"></i> 
+                                    <a class="text-light" href="">Top Perfomers</a>
                                 </div>
                                 <div class="card-body">
                                     <ul class="list-group list-group-flush">
@@ -504,124 +241,119 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
                 <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="timeInfoModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content bg-dark text-light">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="timeInfoModalLabel">Attendance Info</h5>
+                            <!-- Modal Header -->
+                            <div class="modal-header border-bottom border-secondary">
+                                <h5 class="modal-title fw-bold" id="timeInfoModalLabel">Attendance Information</h5>
                                 <button type="button" class="btn-close bg-light" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
+
+                            <!-- Modal Body -->
                             <div class="modal-body">
-                                <div class="d-flex justify-content-around">
-                                    <div>
-                                        <h6 class="fw-bold">Time In:</h6>
-                                        <p class="text-info fw-bold" id="timeIn"></p> <!-- Time will be dynamically filled -->
+                                <div class="d-flex flex-wrap justify-content-around align-items-start text-center gap-4">
+                                    <div class="d-flex flex-column gap-4 mb-2">
+                                        <div>
+                                            <h6 class="fw-bold text-light text-start">Date:</h6>
+                                            <p class="fw-bold text-info mb-0 text-start" id="attendanceDate"></p>
+                                        </div>
+
+                                        <div>
+                                            <h6 class="fw-bold text-light text-start">Time In:</h6>
+                                            <p class="fw-bold text-info mb-0 text-start" id="timeIn"></p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h6 class="fw-bold">Time Out:</h6>
-                                        <p class="text-info fw-bold" id="timeOut"></p> <!-- Time will be dynamically filled -->
-                                    </div>
-                                </div>
-                                <!-- New Section for Work Status -->
-                                <div class="d-flex justify-content-around mt-3">
-                                    <div>
-                                        <h6 class="fw-bold">Work Status:</h6>
-                                        <p class="text-warning fw-bold" id="workStatus"></p> <!-- Status will be dynamically filled -->
+
+                                    <div class="d-flex flex-column gap-4">
+                                        <div>
+                                            <h6 class="fw-bold text-light text-start">Status:</h6>
+                                            <p class="fw-bold mb-0 text-start" id="workStatus"></p>
+                                        </div>
+
+                                        <div>
+                                            <h6 class="fw-bold text-light text-start">Time Out:</h6>
+                                            <p class="fw-bold text-info mb-0 text-start" id="timeOut"></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="modal-footer">
+
+                            <div class="modal-footer border-top border-secondary">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            <?php include 'footer.php'; ?>
-        </div>
-    </div>
+                <div class="modal fade" id="todoModal" tabindex="-1" aria-labelledby="todoModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark text-light">
+                            <div class="modal-header">
+                                <h5 class="modal-title text-info" id="todoModalLabel">To Do</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                                        <i class="fas fa-plus me-2"></i>Add To Do List
+                                    </button>
+                                </div>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task1">
+                                            <label class="form-check-label" for="task1">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Facial Recognition
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task2">
+                                            <label class="form-check-label" for="task2">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Attendance Record
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task3">
+                                            <label class="form-check-label" for="task3">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Leave Processing
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task4">
+                                            <label class="form-check-label" for="task4">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Performance Processing
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task5">
+                                            <label class="form-check-label" for="task5">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Payroll Processing
+                                            </label>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item bg-dark text-light fs-4 border-0 d-flex justify-content-between align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="" id="task6">
+                                            <label class="form-check-label" for="task6">
+                                                <i class="bi bi-check-circle text-warning me-2"></i>Social Recognition
+                                            </label>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              <?php include 'footer.php'; ?>
+            </div>
+          </div>
 
 <script>
-    // for calendar only
-    let calendar; // Declare calendar variable globally
-
-    function toggleCalendar() {
-        const calendarContainer = document.getElementById('calendarContainer');
-        if (calendarContainer.style.display === 'none' || calendarContainer.style.display === '') {
-            calendarContainer.style.display = 'block';
-
-            // Initialize the calendar if it hasn't been initialized yet
-            if (!calendar) {
-                initializeCalendar();
-            }
-        } else {
-            calendarContainer.style.display = 'none';
-        }
-    }
-
-    function initializeCalendar() {
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            height: 440,  // Set the height of the calendar to make it small
-            events: {
-                url: '../../db/holiday.php',  // Endpoint for fetching events
-                method: 'GET',
-                failure: function() {
-                    alert('There was an error fetching events!');
-                }
-            }
-        });
-
-        calendar.render();
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const currentDateElement = document.getElementById('currentDate');
-        const currentDate = new Date().toLocaleDateString(); // Get the current date
-        currentDateElement.textContent = currentDate; // Set the date text
-    });
-
-    document.addEventListener('click', function(event) {
-        const calendarContainer = document.getElementById('calendarContainer');
-        const calendarButton = document.querySelector('button[onclick="toggleCalendar()"]');
-
-        if (!calendarContainer.contains(event.target) && !calendarButton.contains(event.target)) {
-            calendarContainer.style.display = 'none';
-        }
-    });
-    // for calendar only end
-
-    function setCurrentTime() {
-        const currentTimeElement = document.getElementById('currentTime');
-        const currentDateElement = document.getElementById('currentDate');
-
-        const currentDate = new Date();
-
-        // Convert to 12-hour format with AM/PM
-        let hours = currentDate.getHours();
-        const minutes = currentDate.getMinutes();
-        const seconds = currentDate.getSeconds();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-
-        hours = hours % 12;
-        hours = hours ? hours : 12; // If hour is 0, set to 12
-
-        const formattedHours = hours < 10 ? '0' + hours : hours;
-        const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-        const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-
-        currentTimeElement.textContent = `${formattedHours}:${formattedMinutes}:${formattedSeconds} ${ampm}`;
-
-        // Format the date in text form (e.g., "January 12, 2025")
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        currentDateElement.textContent = currentDate.toLocaleDateString('en-US', options);
-    }
-
-    setCurrentTime();
-    setInterval(setCurrentTime, 1000);
-
 
 // ATTENDANCE
 let currentMonth = new Date().getMonth(); // January is 0, December is 11
@@ -673,17 +405,15 @@ function calculateAttendanceStatus(timeIn, timeOut) {
         }
     }
 
-    return status || 'On Time'; // Default to "On Time" if no issues
+    return status || 'Present'; // Default to "Present" if no issues
 }
 
-// Function to render the calendar for a specific month and year
 function renderCalendar(month, year, attendanceRecords = {}) {
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); // Get total days in the current month
-    const firstDay = new Date(year, month, 1).getDay(); // Get the starting day (0 = Sunday, 1 = Monday, etc.)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
 
     let calendarHTML = '<div class="row text-center pt-3">';
 
-    // Add empty columns before the first day of the month
     for (let i = 0; i < firstDay; i++) {
         calendarHTML += '<div class="col"></div>';
     }
@@ -691,16 +421,33 @@ function renderCalendar(month, year, attendanceRecords = {}) {
     // Fill in the days of the month
     let dayCounter = 1;
     for (let i = firstDay; i < 7; i++) {
-        const status = (i === 0) ? 'Day Off' : attendanceRecords[dayCounter] || ''; // Set "Day Off" for Sundays (day 0)
-        
-        // Add a border if this is the filtered day
+        const dayStatus = attendanceRecords[dayCounter];
+        const status = (i === 0) ? 'Day Off' :
+                       (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' :
+                       dayStatus || '';
+
+        // Check for multiple statuses
+        const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
         const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
         const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
+
+        // Simplified status logic, adding 'text-muted' for holidays, leaves, and day off
+        let statusClass = '';
+        if (statusCount > 1) {
+            statusClass = 'text-dark'; // Black for multiple statuses
+        } else {
+            statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
+                          status === 'Absent' ? 'text-muted' : // Red for Absent
+                          status === 'Late' ? 'text-warning' : // Yellow for Late
+                          status === 'Half-Day' ? 'text-light' : // Light for Half-Day
+                          status === 'Early Out' ? 'text-warning' : // warning for Early Out
+                          status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : ''; // Muted for Day Off, Holidays, and On Leave
+        }
 
         calendarHTML += `
             <div class="col">
                 <button class="btn text-light p-0 ${borderClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})">
-                    <span class="fw-bold ${status === 'Present' ? 'text-success' : status === 'Absent' ? 'text-danger' : status === 'Late' ? 'text-warning' : status === 'Day Off' ? 'text-muted' : ''}">
+                    <span class="fw-bold ${statusClass}">
                         ${dayCounter}
                     </span>
                 </button>
@@ -716,16 +463,34 @@ function renderCalendar(month, year, attendanceRecords = {}) {
         let dayOfWeek = 0; // Reset for each row
 
         for (let i = 0; i < 7 && dayCounter <= daysInMonth; i++) {
-            const status = (dayOfWeek === 0) ? 'Day Off' : attendanceRecords[dayCounter] || ''; 
+            const dayStatus = attendanceRecords[dayCounter]; // Get the status for the current day
+            const status = (dayOfWeek === 0) ? 'Day Off' : // Set "Day Off" for Sundays (day 0)
+                           (dayStatus && dayStatus.status === 'Holiday') ? 'Holiday' : // Check for holidays
+                           dayStatus || ''; // Fallback to the status or empty string
+
+            // Check for multiple statuses
+            const statusCount = Array.isArray(attendanceRecords[dayCounter]) ? attendanceRecords[dayCounter].length : 1;
             
-            // Add a border if this is the filtered day
             const isFilteredDay = filteredDay && filteredDay.getDate() === dayCounter && filteredDay.getMonth() === month && filteredDay.getFullYear() === year;
             const borderClass = isFilteredDay ? 'border border-2 border-light' : '';
+
+            // Simplified status logic, adding 'text-muted' for holidays, leaves, and day off
+            let statusClass = '';
+            if (statusCount > 1) {
+                statusClass = 'text-dark'; // Black for multiple statuses
+            } else {
+                statusClass = status === 'Present' ? 'text-success' : // Green for Present/Present
+                              status === 'Absent' ? 'text-muted' : // Red for Absent
+                              status === 'Late' ? 'text-warning' : // Yellow for Late
+                              status === 'Half-Day' ? 'text-light' : // Light for Half-Day
+                              status === 'Early Out' ? 'text-warning' : // warning for Early Out
+                              status === 'Day Off' || status === 'Holiday' || status === 'On Leave' ? 'text-danger' : ''; // Muted for Day Off, Holidays, and On Leave
+            }
 
             calendarHTML += `
                 <div class="col">
                     <button class="btn text-light p-0 ${borderClass}" data-bs-toggle="modal" data-bs-target="#attendanceModal" onclick="showAttendanceDetails(${dayCounter})">
-                        <span class="fw-bold ${status === 'Present' ? 'text-success' : status === 'Absent' ? 'text-danger' : status === 'Late' ? 'text-warning' : status === 'Day Off' ? 'text-muted' : ''}">
+                        <span class="fw-bold ${statusClass}">
                             ${dayCounter}
                         </span>
                     </button>
@@ -749,64 +514,221 @@ function renderCalendar(month, year, attendanceRecords = {}) {
     document.getElementById('todaysDate').textContent = `${monthNames[new Date().getMonth()]} ${new Date().getDate()}, ${new Date().getFullYear()}`;
 }
 
-// Fetch attendance data for a specific month and year
-function fetchAttendance(month, year) {
-    fetch(`/HR2/employee_db/staff/fetch_attendance.php?e_id=${employeeId}&month=${month + 1}&year=${year}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                console.error(data.error);
-                return;
-            }
+// Fetch attendance for the given month and year
+async function fetchAttendance(month, year) {
+    try {
+        const response = await fetch(`/HR2/employee_db/supervisor/fetch_attendance.php?e_id=${employeeId}&month=${month + 1}&year=${year}`);
+        const data = await response.json();
 
-            // Handle attendance records and render calendar
-            renderCalendar(month, year, data); // Pass attendance data to render calendar
-        })
-        .catch(error => console.error('Error fetching attendance data:', error));
+        if (data.error) {
+            console.error('Error fetching attendance data:', data.error);
+            return;
+        }
+
+        // Handle attendance records and render calendar
+        renderCalendar(month, year, data); // Pass attendance data to render calendar
+    } catch (error) {
+        console.error('Error fetching attendance data:', error);
+    }
 }
 
 // Show attendance details when a specific day is clicked
-function showAttendanceDetails(day) {
-    fetch(`/HR2/employee_db/staff/fetch_attendance.php?e_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                console.error(data.error);
-                return;
-            }
+async function showAttendanceDetails(day) {
+    const selectedDate = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
+    document.getElementById('attendanceDate').textContent = selectedDate;
 
-            // If there's no time_in or time_out, mark it as "Absent"
-            const timeInFormatted = data.time_in ? formatTimeWithAmPm(data.time_in) : 'Absent';
-            const timeOutFormatted = data.time_out ? formatTimeWithAmPm(data.time_out) : 'Absent';
+    // Get the current date
+    const currentDate = new Date();
+    const selectedDateObj = new Date(currentYear, currentMonth, day);
+    const isCurrentOrPastDay = selectedDateObj <= currentDate;
 
-            // Calculate the status (Late, Overtime, or On Time)
-            const attendanceStatus = calculateAttendanceStatus(data.time_in, data.time_out);
+    // Check if the selected day is a Sunday
+    const isSunday = selectedDateObj.getDay() === 0; // Sunday is 0 in JavaScript's getDay()
 
-            // Update the modal with the formatted time_in, time_out, and attendance status
-            document.getElementById('timeIn').textContent = timeInFormatted;
-            document.getElementById('timeOut').textContent = timeOutFormatted;
-            document.getElementById('workStatus').textContent = attendanceStatus;
-            // Set appropriate colors for the status
+    const leaveResponse = await fetch(`/HR2/employee_db/supervisor/fetch_leave.php?e_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+    const leaveData = await leaveResponse.json();
+
+    if (leaveData.onLeave) {
+        document.getElementById('timeIn').textContent = `On Leave`;
+        document.getElementById('timeOut').textContent = `On Leave`;
+        document.getElementById('workStatus').textContent = leaveData.leaveType || 'On Leave'; // Fallback to 'On Leave' if leaveType is undefined
+
+        const statusElement = document.getElementById('workStatus');
+        statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+        statusElement.classList.add('text-danger');
+    } else {
+        const attendanceResponse = await fetch(`/HR2/employee_db/staff/fetch_attendance.php?e_id=${employeeId}&day=${day}&month=${currentMonth + 1}&year=${currentYear}`);
+        const data = await attendanceResponse.json();
+
+        if (data.error) {
+            console.error(data.error);
+            return;
+        }
+
+        const isHoliday = data.status === 'Holiday'; // Assuming the status is returned as 'Holiday' for holidays
+        const isDayOff = data.status === 'Day Off' || isSunday; // Mark Sunday as "Day Off"
+
+        if (isHoliday) {
+            document.getElementById('timeIn').textContent = 'Holiday';
+            document.getElementById('timeOut').textContent = 'Holiday';
+            document.getElementById('workStatus').textContent = data.holiday_name || 'Holiday';
+
             const statusElement = document.getElementById('workStatus');
-            if (attendanceStatus === 'Late') {
-                statusElement.classList.add('text-warning');
-                statusElement.classList.remove('text-success', 'text-danger', 'text-muted');
-            } else if (attendanceStatus === 'Overtime') {
-                statusElement.classList.add('text-info');
-                statusElement.classList.remove('text-success', 'text-danger', 'text-muted');
-            } else if (attendanceStatus === 'On Time') {
-                statusElement.classList.add('text-success');
-                statusElement.classList.remove('text-warning', 'text-danger', 'text-muted');
-            } else if (attendanceStatus === 'Absent') {
-                statusElement.classList.add('text-success');
-                statusElement.classList.remove('text-warning', 'text-danger', 'text-muted');
-            } else {
-                statusElement.classList.add('text-muted');
-                statusElement.classList.remove('text-success', 'text-danger', 'text-warning');
+            statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+            statusElement.classList.add('text-danger');
+        } else if (isDayOff) {
+            document.getElementById('timeIn').textContent = 'Day Off';
+            document.getElementById('timeOut').textContent = 'Day Off';
+            document.getElementById('workStatus').textContent = 'Day Off';
+
+            const statusElement = document.getElementById('workStatus');
+            statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+            statusElement.classList.add('text-danger'); // Use danger color for "Day Off"
+        } else {
+            // Check if it's a future day
+            if (!isCurrentOrPastDay) {
+                document.getElementById('timeIn').textContent = 'No Data Found';
+                document.getElementById('timeOut').textContent = 'No Data Found';
+                document.getElementById('workStatus').textContent = 'No Data Found';
+
+                const statusElement = document.getElementById('workStatus');
+                statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+                statusElement.classList.add('text-muted'); // Use a muted color for "No Data Found"
             }
-        })
-        .catch(error => console.error('Error fetching attendance details:', error));
+            // Check if it's the current day or a past day and there's no attendance data
+            else if (isCurrentOrPastDay && (!data.time_in && !data.time_out)) {
+                document.getElementById('timeIn').textContent = 'Absent';
+                document.getElementById('timeOut').textContent = 'Absent';
+                document.getElementById('workStatus').textContent = 'Absent';
+
+                const statusElement = document.getElementById('workStatus');
+                statusElement.classList.remove('text-success', 'text-warning', 'text-info', 'text-light', 'text-muted', 'text-warning');
+                statusElement.classList.add('text-muted'); // Use a muted color for "Absent"
+            } else {
+                const timeInFormatted = data.time_in ? formatTimeWithAmPm(data.time_in) : 'Absent';
+                const timeOutFormatted = data.time_out ? formatTimeWithAmPm(data.time_out) : 'Absent';
+
+                // Pass onLeave status to calculateAttendanceStatus
+                const attendanceStatus = calculateAttendanceStatus(data.time_in, data.time_out, day, leaveData.onLeave);
+
+                // Display time-in and time-out
+                document.getElementById('timeIn').textContent = timeInFormatted;
+                document.getElementById('timeOut').textContent = timeOutFormatted;
+
+                // Display status with individual colors
+                const statusElement = document.getElementById('workStatus');
+                statusElement.innerHTML = ''; // Clear previous content
+
+                attendanceStatus.forEach((status, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = status;
+
+                    // Assign color based on the status
+                    switch (status) {
+                        case 'Late':
+                            span.classList.add('text-warning'); // Yellow for Late
+                            break;
+                        case 'Overtime':
+                            span.classList.add('text-primary'); // Blue for Overtime
+                            break;
+                        case 'Present':
+                            span.classList.add('text-success'); // Green for Present
+                            break;
+                        case 'Absent':
+                            span.classList.add('text-muted'); // Red for Absent
+                            break;
+                        case 'Day Off':
+                            span.classList.add('text-danger'); // Light for Day Off
+                            break;
+                        case 'Half-Day':
+                            span.classList.add('text-light'); // Light for Half-Day
+                            break;
+                        case 'On Leave':
+                            span.classList.add('text-danger'); // Red for On Leave
+                            break;
+                        case 'Early Out':
+                            span.classList.add('text-warning'); // warning for Early Out
+                            break;
+                        default:
+                            span.classList.add('text-dark'); // Default color
+                    }
+
+                    statusElement.appendChild(span);
+
+                    // Add a separator (&) between statuses (except for the last one)
+                    if (index < attendanceStatus.length - 1) {
+                        const separatorSpan = document.createElement('span');
+                        separatorSpan.textContent = ' & ';
+                        separatorSpan.classList.add('text-white'); // White color for the separator
+                        statusElement.appendChild(separatorSpan);
+                    }
+                });
+            }
+        }
+    }
 }
+
+// Function to calculate attendance status
+function calculateAttendanceStatus(timeIn, timeOut, day, onLeave = false) {
+    let status = [];
+
+    // Check if the employee is on leave
+    if (onLeave) {
+        status.push('On Leave');
+        return status; // Return early if the employee is on leave
+    }
+
+    // Check if the day is a Sunday (0 for Sunday in JavaScript)
+    const date = new Date(currentYear, currentMonth, day);
+    if (date.getDay() === 0) {
+        return ['Day Off'];
+    }
+
+    // If there's no time_in or time_out, return "Absent"
+    if (!timeIn || !timeOut) {
+        return ['Absent'];
+    }
+
+    // Convert timeIn and timeOut to Date objects for comparison
+    const timeThreshold = new Date('1970-01-01T08:10:00'); // Threshold time for Late check
+    const timeInDate = new Date('1970-01-01T' + timeIn);
+    const timeOutDate = new Date('1970-01-01T' + timeOut);
+
+    // Check if employee is late
+    if (timeInDate > timeThreshold) {
+        status.push('Late');
+    }
+
+    // Check if there's overtime (Example: work beyond 6:00 PM)
+    const overtimeThreshold = new Date('1970-01-01T18:00:00');
+    if (timeOutDate > overtimeThreshold) {
+        status.push('Overtime');
+    }
+
+    // Check if employee left early (1 to 3 hours before operation end time)
+    const operationEndTime = new Date('1970-01-01T17:00:00'); // Operation end time is 5:00 PM
+    const earlyOutStart = new Date('1970-01-01T14:00:00'); // Early out starts at 2:00 PM
+    if (timeOutDate >= earlyOutStart && timeOutDate < operationEndTime) {
+        status.push('Early Out');
+    }
+
+    // If no specific status, return "Present"
+    if (status.length === 0) {
+        status.push('Present');
+    }
+
+    return status; // Return an array of statuses
+}
+
+
+// Function to format time in HH:MM AM/PM format
+function formatTimeWithAmPm(time) {
+    const [hours, minutes] = time.split(':');
+    const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
+    const formattedHours = (parseInt(hours) % 12) || 12;
+    return `${formattedHours}:${minutes} ${ampm}`;
+}
+
 
 // Event listeners for next and previous month buttons
 document.getElementById('nextMonthBtn').addEventListener('click', function() {
@@ -840,15 +762,118 @@ document.getElementById('dateFilter').addEventListener('change', function () {
 fetchAttendance(currentMonth, currentYear);
 
 
+ // PHP variables passed to JavaScript
+const evaluationData = {
+    avg_quality: <?php echo json_encode($evaluation['avg_quality'] ?? null); ?>,
+    avg_communication_skills: <?php echo json_encode($evaluation['avg_communication_skills'] ?? null); ?>,
+    avg_teamwork: <?php echo json_encode($evaluation['avg_teamwork'] ?? null); ?>,
+    avg_punctuality: <?php echo json_encode($evaluation['avg_punctuality'] ?? null); ?>,
+    avg_initiative: <?php echo json_encode($evaluation['avg_initiative'] ?? null); ?>,
+    totalAverage: <?php echo json_encode($totalAverage ?? null); ?>
+};
 
-
+// Radar Chart initialization
+const ctx = document.getElementById('performanceRadarChart').getContext('2d');
+const performanceRadarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+        labels: ['Quality of Work', 'Communication Skills', 'Teamwork', 'Punctuality', 'Initiative'],
+        datasets: [
+            {
+                label: 'Category Ratings',
+                data: [
+                    evaluationData.avg_quality,
+                    evaluationData.avg_communication_skills,
+                    evaluationData.avg_teamwork,
+                    evaluationData.avg_punctuality,
+                    evaluationData.avg_initiative
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)', // Light blue fill
+                borderColor: 'rgba(54, 162, 235, 1)', // Blue border
+                borderWidth: 2
+            },
+            {
+                label: 'Overall Rating',
+                data: [
+                    evaluationData.totalAverage,
+                    evaluationData.totalAverage,
+                    evaluationData.totalAverage,
+                    evaluationData.totalAverage,
+                    evaluationData.totalAverage
+                ],
+                backgroundColor: 'rgba(255, 99, 132, 0.2)', // Light red fill
+                borderColor: 'rgba(255, 99, 132, 1)', // Red border
+                borderWidth: 2
+            }
+        ]
+    },
+    options: {
+        scales: {
+            r: {
+                angleLines: {
+                    display: true,
+                    color: 'rgba(200, 200, 200, 0.2)' // Customize angle line color
+                },
+                grid: {
+                    color: 'rgba(255, 255, 255, 0.2)' // Customize grid line color
+                },
+                suggestedMin: 0,
+                suggestedMax: 6,
+                ticks: {
+                    stepSize: 1,
+                    display: false // Hide the tick labels (1 to 6)
+                },
+                pointLabels: {
+                    color: 'white', // Change label color (e.g., teal)
+                    font: {
+                        size: 14, // Change label font size
+                        weight: 'bold', // Make label text bold
+                        family: 'Arial' // Change label font family
+                    },
+                    padding: 15
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'left'
+            },
+            tooltip: {
+                enabled: true, // Enable tooltips
+                callbacks: {
+                    label: function (context) {
+                        return `${context.dataset.label}: ${context.raw}`; // Show dataset label and value in tooltip
+                    }
+                }
+            },
+            datalabels: {
+                color: function (context) {
+                    // Use different colors for the two datasets
+                    return context.datasetIndex === 0 ? 'cyan' : 'pink'; // Customize data label colors
+                },
+                anchor: 'center', // Position the label at the center of the point
+                align: function (context) {
+                    // Align first dataset labels to top, second dataset labels to bottom
+                    return context.datasetIndex === 0 ? 'top' : 'bottom';
+                },
+                formatter: function (value) {
+                    return value; // Display the value as the label
+                }
+            }
+        },
+        responsive: true,
+        maintainAspectRatio: false
+    },
+    plugins: [ChartDataLabels] // Enable the datalabels plugin
+});
 </script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../js/employee.js"></script>
 
 
-
 </body>
 
 </html>
+

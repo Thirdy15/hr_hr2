@@ -2,12 +2,20 @@
 session_start();
 
 if (!isset($_SESSION['e_id'])) {
-    header("Location: ../employee/employeelogin.php");
+    header("Location: ../../login.php");
     exit();
 }
 
-// Include the database connection  
-include '../../db/db_conn.php'; 
+// Include the database connection
+include '../../db/db_conn.php';
+
+$employeeId = $_SESSION['e_id'];
+$sql = "SELECT e_id, firstname, middlename, lastname, birthdate, email, role, position, department, phone_number, address, pfp FROM employee_register WHERE e_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $employeeId);
+$stmt->execute();
+$result = $stmt->get_result();
+$employeeInfo = $result->fetch_assoc();
 
 $position = $_SESSION['position']; // Ensure this is set during login
 $department = $_SESSION['department']; // Ensure this is set during login
@@ -16,16 +24,13 @@ $department = $_SESSION['department']; // Ensure this is set during login
 $role = 'employee';
 
 // Fetch employee records where role is 'employee' and department matches the logged-in employee's department
-// Assume you have the values for $role, $department, and $position
 $sql = "SELECT e_id, firstname, lastname, role, position FROM employee_register WHERE role = ? AND department = ? AND position IN ('supervisor', 'staff', 'fieldworker', 'contractual')";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param('ss', $role, $department);  // Bind the parameters for role and department (both strings)
 $stmt->execute();
 $result = $stmt->get_result();
 
-
 // Fetch evaluations for this employee
-$employeeId = $_SESSION['e_id'];
 $evaluatedEmployees = [];
 $evalSql = "SELECT e_id FROM admin_evaluations WHERE e_id = ?";
 $evalStmt = $conn->prepare($evalSql);
@@ -57,6 +62,16 @@ foreach ($categories as $category) {
     }
 }
 
+// Fetch notifications for the employee
+$notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
+$notificationStmt = $conn->prepare($notificationQuery);
+$notificationStmt->bind_param("i", $employeeId);
+$notificationStmt->execute();
+$notifications = $notificationStmt->get_result();
+
+// Set the profile picture, default if not provided
+$profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../img/defaultpfp.png';
+
 // Check if any records are found
 $employees = [];
 if ($result->num_rows > 0) {
@@ -80,6 +95,8 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Evaluation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href='../../css/styles.css' rel='stylesheet' />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -555,108 +572,136 @@ $conn->close();
         }
     </style>
 </head>
+<body class="sb-nav-fixed">
+    <?php include 'navbar.php'; ?>
+    <div id="layoutSidenav">
+        <?php include 'sidebar.php'; ?>
+        <div id="layoutSidenav_content">
+        <?php include 'sidebar.php'; ?>
+            <main class="bg-black">
+                <div class="page-container">
+                    <div class="page-header">
+                        <h1 class="page-title">Employee Evaluation</h1>
+                        <p class="page-subtitle">Evaluate your colleagues in the <?php echo htmlspecialchars($department); ?> department</p>
+                    </div>
 
-<body>
-    <div class="page-container">
-        <div class="page-header">
-            <h1 class="page-title">Employee Evaluation</h1>
-            <p class="page-subtitle">Evaluate your colleagues in the <?php echo htmlspecialchars($department); ?> department</p>
-        </div>
-
-        <div class="employee-grid">
-            <?php if (!empty($employees)): ?>
-                <?php foreach ($employees as $index => $employee): ?>
-                    <div class="employee-card fade-in" style="animation-delay: <?php echo $index * 0.1; ?>s">
-                        <div class="employee-info">
-                            <div class="employee-avatar">
-                                <?php echo strtoupper(substr($employee['firstname'], 0, 1)); ?>
-                            </div>
-                            <div class="employee-details">
-                                <h3 class="employee-name"><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></h3>
-                                <div class="employee-position">
-                                    <i class="bi bi-briefcase-fill"></i>
-                                    <?php echo htmlspecialchars($employee['position']); ?>
+                    <div class="employee-grid">
+                        <?php if (!empty($employees)): ?>
+                            <?php foreach ($employees as $index => $employee): ?>
+                                <div class="employee-card fade-in" style="animation-delay: <?php echo $index * 0.1; ?>s">
+                                    <div class="employee-info">
+                                        <div class="employee-avatar">
+                                            <?php echo strtoupper(substr($employee['firstname'], 0, 1)); ?>
+                                        </div>
+                                        <div class="employee-details">
+                                            <h3 class="employee-name"><?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?></h3>
+                                            <div class="employee-position">
+                                                <i class="bi bi-briefcase-fill"></i>
+                                                <?php echo htmlspecialchars($employee['position']); ?>
+                                            </div>
+                                            <span class="employee-role"><?php echo htmlspecialchars($employee['role']); ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <?php if (in_array($employee['e_id'], $evaluatedEmployees)): ?>
+                                            <button class="action-btn evaluated-btn" disabled>
+                                                <i class="bi bi-check-circle-fill"></i> Evaluated
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="action-btn evaluate-btn"
+                                                onclick="evaluateEmployee(<?php echo $employee['e_id']; ?>, '<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')">
+                                                <i class="bi bi-star-fill me-2"></i> Evaluate
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                                <span class="employee-role"><?php echo htmlspecialchars($employee['role']); ?></span>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="empty-state">
+                                <i class="bi bi-people"></i>
+                                <p>No employees found for evaluation in <?php echo htmlspecialchars($department); ?>.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Evaluation Modal -->
+                <div class="modal fade" id="evaluationModal" tabindex="-1" aria-labelledby="evaluationModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="evaluationModalLabel">Employee Evaluation</h5>
+                                <button type="button" class="close-btn" data-bs-dismiss="modal" aria-label="Close">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="employee-header">
+                                    <div class="employee-modal-avatar" id="employeeAvatar"></div>
+                                    <div class="employee-modal-details" id="employeeDetails"></div>
+                                </div>
+
+                                <input type="hidden" id="e_id" value="<?php echo $_SESSION['e_id']; ?>">
+                                <div id="evaluationForm" class="evaluation-form"></div>
+
+                                <div class="progress-container">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Evaluation Progress</span>
+                                        <span id="progressPercentage">0%</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" id="evaluationProgress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-submit" onclick="submitEvaluation()">
+                                    <i class="bi bi-send-fill me-2"></i>Submit Evaluation
+                                </button>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-end">
-                            <?php if (in_array($employee['e_id'], $evaluatedEmployees)): ?>
-                                <button class="action-btn evaluated-btn" disabled>
-                                    <i class="bi bi-check-circle-fill"></i> Evaluated
+                    </div>
+                </div>
+
+                <!-- Progress Indicator (visible when scrolling through evaluation) -->
+                <div class="progress-indicator" id="progressIndicator" style="display: none;">
+                    <span class="progress-text">Evaluation Progress:</span>
+                    <div class="progress-bar-container">
+                        <div class="evaluation-progress" id="floatingProgress"></div>
+                    </div>
+                    <span class="ms-2" id="floatingPercentage">0%</span>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                                <button type="button" class="close-btn" data-bs-dismiss="modal" aria-label="Close">
+                                    <i class="bi bi-x-lg"></i>
                                 </button>
-                            <?php else: ?>
-                                <button class="action-btn evaluate-btn" 
-                                    onclick="evaluateEmployee(<?php echo $employee['e_id']; ?>, '<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>', '<?php echo htmlspecialchars($employee['position']); ?>')">
-                                    <i class="bi bi-star-fill me-2"></i> Evaluate
+                            </div>
+                            <div class="modal-body">
+                                Are you sure you want to log out?
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-submit" onclick="logout()">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
                                 </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="empty-state">
-                    <i class="bi bi-people"></i>
-                    <p>No employees found for evaluation in <?php echo htmlspecialchars($department); ?>.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Evaluation Modal -->
-    <div class="modal fade" id="evaluationModal" tabindex="-1" aria-labelledby="evaluationModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="evaluationModalLabel">Employee Evaluation</h5>
-                    <button type="button" class="close-btn" data-bs-dismiss="modal" aria-label="Close">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="employee-header">
-                        <div class="employee-modal-avatar" id="employeeAvatar"></div>
-                        <div class="employee-modal-details" id="employeeDetails"></div>
-                    </div>
-                    
-                    <input type="hidden" id="e_id" value="<?php echo $_SESSION['e_id']; ?>">
-                    <div id="evaluationForm" class="evaluation-form"></div>
-                    
-                    <div class="progress-container">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Evaluation Progress</span>
-                            <span id="progressPercentage">0%</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar" id="evaluationProgress" role="progressbar" style="width: 0%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-submit" onclick="submitEvaluation()">
-                        <i class="bi bi-send-fill me-2"></i>Submit Evaluation
-                    </button>
-                </div>
-            </div>
+            </main>
         </div>
     </div>
-
-    <!-- Progress Indicator (visible when scrolling through evaluation) -->
-    <div class="progress-indicator" id="progressIndicator" style="display: none;">
-        <span class="progress-text">Evaluation Progress:</span>
-        <div class="progress-bar-container">
-            <div class="evaluation-progress" id="floatingProgress"></div>
-        </div>
-        <span class="ms-2" id="floatingPercentage">0%</span>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
         let currentEmployeeId;
-        let currentEmployeeName;  
+        let currentEmployeeName;
         let currentEmployeePosition;
         let totalQuestions = 0;
         let answeredQuestions = 0;
@@ -672,10 +717,10 @@ $conn->close();
         };
 
         function evaluateEmployee(e_id, employeeName, employeePosition) {
-            currentEmployeeId = e_id; 
-            currentEmployeeName = employeeName; 
+            currentEmployeeId = e_id;
+            currentEmployeeName = employeeName;
             currentEmployeePosition = employeePosition;
-            
+
             // Reset progress tracking
             totalQuestions = 0;
             answeredQuestions = 0;
@@ -689,15 +734,15 @@ $conn->close();
             `;
 
             const evaluationForm = document.getElementById('evaluationForm');
-            evaluationForm.innerHTML = ''; 
+            evaluationForm.innerHTML = '';
 
             // Create form sections for each category
             for (const [category, categoryQuestions] of Object.entries(questions)) {
                 totalQuestions += categoryQuestions.length;
-                
+
                 const categorySection = document.createElement('div');
                 categorySection.className = 'category-section';
-                
+
                 // Create category header
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'category-header';
@@ -708,13 +753,13 @@ $conn->close();
                     <h4 class="category-title">${category}</h4>
                 `;
                 categorySection.appendChild(categoryHeader);
-                
+
                 // Add questions for this category
                 categoryQuestions.forEach((question, index) => {
                     const questionName = `${category.replace(/\s/g, '')}q${index}`;
                     const questionItem = document.createElement('div');
                     questionItem.className = 'question-item';
-                    
+
                     questionItem.innerHTML = `
                         <div class="question-text">${question}</div>
                         <div class="star-rating" data-question="${questionName}">
@@ -728,21 +773,21 @@ $conn->close();
                             <span>Excellent</span>
                         </div>
                     `;
-                    
+
                     categorySection.appendChild(questionItem);
                 });
-                
+
                 evaluationForm.appendChild(categorySection);
             }
 
             // Show the modal
             const evaluationModal = new bootstrap.Modal(document.getElementById('evaluationModal'));
             evaluationModal.show();
-            
+
             // Setup scroll event for floating progress indicator
             const modalBody = document.querySelector('.modal-body');
             const progressIndicator = document.getElementById('progressIndicator');
-            
+
             modalBody.addEventListener('scroll', function() {
                 if (modalBody.scrollTop > 200) {
                     progressIndicator.style.display = 'flex';
@@ -761,11 +806,11 @@ $conn->close();
 
         function updateProgress() {
             const percentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
-            
+
             // Update progress bar in modal
             document.getElementById('evaluationProgress').style.width = `${percentage}%`;
             document.getElementById('progressPercentage').textContent = `${percentage}%`;
-            
+
             // Update floating progress indicator
             document.getElementById('floatingProgress').style.width = `${percentage}%`;
             document.getElementById('floatingPercentage').textContent = `${percentage}%`;
@@ -777,8 +822,8 @@ $conn->close();
 
             evaluationForm.querySelectorAll('input[type="radio"]:checked').forEach(input => {
                 evaluations.push({
-                    question: input.name,  
-                    rating: input.value    
+                    question: input.name,
+                    rating: input.value
                 });
             });
 
@@ -820,7 +865,7 @@ $conn->close();
                     employeePosition: currentEmployeePosition,
                     categoryAverages: categoryAverages,
                     employeeId: employeeId,
-                    department: department  
+                    department: department
                 },
                 success: function (response) {
                     // Reset button state
@@ -837,7 +882,7 @@ $conn->close();
                     } else {
                         // Close the modal
                         bootstrap.Modal.getInstance(document.getElementById('evaluationModal')).hide();
-                        
+
                         // Show success message
                         Swal.fire({
                             title: 'Success!',
@@ -854,7 +899,7 @@ $conn->close();
                     // Reset button state
                     submitBtn.innerHTML = originalBtnText;
                     submitBtn.disabled = false;
-                    
+
                     console.error(err);
                     Swal.fire({
                         title: 'Error',
@@ -870,16 +915,27 @@ $conn->close();
             const categoryEvaluations = evaluations.filter(evaluation => evaluation.question.startsWith(category));
 
             if (categoryEvaluations.length === 0) {
-                return 0; 
+                return 0;
             }
 
             const total = categoryEvaluations.reduce((sum, evaluation) => sum + parseInt(evaluation.rating), 0);
             return total / categoryEvaluations.length;
         }
+
+        function showLogoutModal() {
+            const logoutModal = new bootstrap.Modal(document.getElementById('logoutModal'));
+            logoutModal.show();
+        }
+
+        function logout() {
+            // Perform the logout process
+            window.location.href = '../../login.php';
+        }
     </script>
 
     <!-- SweetAlert2 for better alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 
 </html>

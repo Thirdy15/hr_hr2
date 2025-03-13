@@ -11,6 +11,15 @@ if (!isset($_SESSION['a_id'])) {
     exit();
 }
 
+// Fetch user info
+$adminId = $_SESSION['a_id'];
+$sql = "SELECT a_id, firstname, middlename, lastname, birthdate, email, role, department, phone_number, address, pfp FROM admin_register WHERE a_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $adminId);
+$stmt->execute();
+$result = $stmt->get_result();
+$adminInfo = $result->fetch_assoc();
+
 // Get the selected month and year from the request (default to current month and year)
 $selectedMonth = isset($_GET['month']) ? $_GET['month'] : date('m');
 $selectedYear = isset($_GET['year']) ? $_GET['year'] : date('Y');
@@ -22,7 +31,7 @@ $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($currentPage < 1) $currentPage = 1;
 
 // Fetch all employees from the employee_register table
-$employeeQuery = "SELECT e_id, CONCAT(firstname, ' ', lastname) AS name 
+$employeeQuery = "SELECT e_id, CONCAT(firstname, ' ', lastname) AS name
                   FROM employee_register";
 if (!empty($searchName)) {
     $employeeQuery .= " WHERE CONCAT(firstname, ' ', lastname) LIKE '%" . $searchName . "%'";
@@ -34,9 +43,9 @@ while ($row = $employeeResult->fetch_assoc()) {
 }
 
 // Fetch attendance logs for the selected month and year
-$attendanceQuery = "SELECT e_id, attendance_date, time_in, time_out, status 
-                    FROM attendance_log 
-                    WHERE MONTH(attendance_date) = ? 
+$attendanceQuery = "SELECT e_id, attendance_date, time_in, time_out, status
+                    FROM attendance_log
+                    WHERE MONTH(attendance_date) = ?
                     AND YEAR(attendance_date) = ?";
 if ($attendanceStmt = $conn->prepare($attendanceQuery)) {
     $attendanceStmt->bind_param("ii", $selectedMonth, $selectedYear);
@@ -57,7 +66,7 @@ if ($attendanceStmt = $conn->prepare($attendanceQuery)) {
 
 // Fetch holidays from non_working_days table
 $holidays = [];
-$holidayQuery = "SELECT date, description FROM non_working_days 
+$holidayQuery = "SELECT date, description FROM non_working_days
                  WHERE MONTH(date) = ? AND YEAR(date) = ?";
 if ($holidayStmt = $conn->prepare($holidayQuery)) {
     $holidayStmt->bind_param("ii", $selectedMonth, $selectedYear);
@@ -73,16 +82,16 @@ if ($holidayStmt = $conn->prepare($holidayQuery)) {
 
 // Fetch leave requests from leave_requests table
 $leaveRequests = [];
-$leaveQuery = "SELECT start_date, end_date, leave_type, e_id FROM leave_requests 
-               WHERE status = 'Approved' 
-               AND ((MONTH(start_date) = ? AND YEAR(start_date) = ?) 
+$leaveQuery = "SELECT start_date, end_date, leave_type, e_id FROM leave_requests
+               WHERE status = 'Approved'
+               AND ((MONTH(start_date) = ? AND YEAR(start_date) = ?)
                OR (MONTH(end_date) = ? AND YEAR(end_date) = ?))";
 
 if ($leaveStmt = $conn->prepare($leaveQuery)) {
     $leaveStmt->bind_param("iiii", $selectedMonth, $selectedYear, $selectedMonth, $selectedYear);
     $leaveStmt->execute();
     $leaveResult = $leaveStmt->get_result();
-    
+
     while ($leaveRow = $leaveResult->fetch_assoc()) {
         $startDate = new DateTime($leaveRow['start_date']);
         $endDate = new DateTime($leaveRow['end_date']);
@@ -457,189 +466,248 @@ $paginatedRecords = array_slice($employeeAttendance, $startIndex, $entriesPerPag
         }
     </style>
 </head>
-<body>
-    <div class="dashboard-container">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-calendar-check me-2"></i>Admin Timesheet
-            </h1>
-            <div class="d-flex align-items-center">
-                <span class="text-secondary me-3">
-                    <i class="fas fa-clock me-1"></i>
-                    <?php echo date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear)); ?>
-                </span>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-filter me-2"></i>Filter Options
-            </div>
-            <div class="card-body">
-                <form method="GET" class="month-selector">
-                    <div class="row align-items-end">
-                        <div class="col-md-3">
-                            <div class="mb-3 mb-md-0">
-                                <label for="month" class="filter-label">Select Month</label>
-                                <select name="month" id="month" class="form-select">
-                                    <?php for ($i = 1; $i <= 12; $i++): ?>
-                                        <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
-                                            <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
-                                        </option>
-                                    <?php endfor; ?>
-                                </select>
+<body class="sb-nav-fixed bg-black">
+    <?php include 'navbar.php' ?>
+    <div id="layoutSidenav">
+        <?php include 'sidebar.php' ?>
+        <div id="layoutSidenav_content">
+            <main class="bg-black">
+                <div class="container-fluid position-relative px-4 py-4">
+                    <!-- Calendar Container -->
+                    <div class="container" id="calendarContainer"
+                        style="position: fixed; top: 9%; right: 0; z-index: 1050;
+                        max-width: 800px; display: none;">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div id="calendar" class="p-2"></div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3 mb-md-0">
-                                <label for="year" class="filter-label">Select Year</label>
-                                <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3 mb-md-0">
-                                <label for="search_name" class="filter-label">Search Employee</label>
-                                <input type="text" name="search_name" id="search_name" class="form-control" value="<?php echo htmlspecialchars($searchName); ?>" placeholder="Enter name...">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-search me-2"></i>Apply Filter
-                            </button>
                         </div>
                     </div>
-                    <!-- Preserve pagination when filtering -->
-                    <input type="hidden" name="page" value="1">
-                </form>
-            </div>
-        </div>
 
-        <div class="card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="fas fa-table me-2"></i>Attendance Records
-                    </div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-light" onclick="exportToCSV()">
-                            <i class="fas fa-download me-1"></i>Export
+                    <!-- Page Header -->
+                    <div class="page-header d-flex justify-content-between align-items-center fade-in">
+                        <div>
+                            <h1 class="page-title">Admin Timesheet</h1>
+                            <p class="text-secondary mb-0">Track and manage employee attendance</p>
+                        </div>
+                        <button class="calendar-toggle-btn" onclick="toggleCalendar()">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>View Calendar</span>
                         </button>
                     </div>
+
+                    <div class="dashboard-container">
+                        <div class="page-header">
+                            <h1 class="page-title">
+                                <i class="fas fa-calendar-check me-2"></i>Admin Timesheet
+                            </h1>
+                            <div class="d-flex align-items-center">
+                                <span class="text-secondary me-3">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <?php echo date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear)); ?>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-filter me-2"></i>Filter Options
+                            </div>
+                            <div class="card-body">
+                                <form method="GET" class="month-selector">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-3">
+                                            <div class="mb-3 mb-md-0">
+                                                <label for="month" class="filter-label">Select Month</label>
+                                                <select name="month" id="month" class="form-select">
+                                                    <?php for ($i = 1; $i <= 12; $i++): ?>
+                                                        <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
+                                                            <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
+                                                        </option>
+                                                    <?php endfor; ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="mb-3 mb-md-0">
+                                                <label for="year" class="filter-label">Select Year</label>
+                                                <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="mb-3 mb-md-0">
+                                                <label for="search_name" class="filter-label">Search Employee</label>
+                                                <input type="text" name="search_name" id="search_name" class="form-control" value="<?php echo htmlspecialchars($searchName); ?>" placeholder="Enter name...">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="fas fa-search me-2"></i>Apply Filter
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <!-- Preserve pagination when filtering -->
+                                    <input type="hidden" name="page" value="1">
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-table me-2"></i>Attendance Records
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-light" onclick="exportToCSV()">
+                                            <i class="fas fa-download me-1"></i>Export
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table id="timesheet" class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Employee</th>
+                                                <th>Time-In</th>
+                                                <th>Time-Out</th>
+                                                <th>Total Hours</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($paginatedRecords)): ?>
+                                                <tr>
+                                                    <td colspan="6" class="text-center">No data available for the selected criteria.</td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($paginatedRecords as $record): ?>
+                                                    <tr>
+                                                        <td><?php echo date('F j, Y', strtotime($record['attendance_date'])); ?></td>
+                                                        <td><?php echo $record['name']; ?></td>
+                                                        <td><?php echo $record['time_in']; ?></td>
+                                                        <td><?php echo $record['time_out']; ?></td>
+                                                        <td><?php echo isset($record['total_hours']) ? $record['total_hours'] : 'N/A'; ?></td>
+                                                        <td>
+                                                            <?php
+                                                            // Set badge class based on status
+                                                            $statusClass = '';
+                                                            $status = $record['status'];
+
+                                                            if (strpos($status, 'Present') !== false) {
+                                                                $statusClass = 'badge-present';
+                                                            } elseif (strpos($status, 'Late') !== false) {
+                                                                $statusClass = 'badge-late';
+                                                            } elseif (strpos($status, 'Overtime') !== false) {
+                                                                $statusClass = 'badge-overtime';
+                                                            } elseif (strpos($status, 'Holiday') !== false) {
+                                                                $statusClass = 'badge-holiday';
+                                                            } elseif (strpos($status, 'Leave') !== false) {
+                                                                $statusClass = 'badge-leave';
+                                                            } elseif (strpos($status, 'Day Off') !== false) {
+                                                                $statusClass = 'badge-dayoff';
+                                                            } elseif (strpos($status, 'Absent') !== false) {
+                                                                $statusClass = 'badge-absent';
+                                                            } elseif (strpos($status, 'No Record') !== false) {
+                                                                $statusClass = 'badge-norecord';
+                                                            }
+                                                            ?>
+                                                            <span class="badge <?php echo $statusClass; ?>"><?php echo $status; ?></span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="pagination-info">
+                                    Showing <?php echo min($startIndex + 1, $totalRecords); ?> to <?php echo min($startIndex + $entriesPerPage, $totalRecords); ?> of <?php echo $totalRecords; ?> entries
+                                </div>
+
+                                <?php if ($totalPages > 1): ?>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination">
+                                        <!-- Previous button -->
+                                        <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+
+                                        <!-- Page numbers -->
+                                        <?php
+                                        $startPage = max(1, $currentPage - 2);
+                                        $endPage = min($totalPages, $startPage + 4);
+                                        if ($endPage - $startPage < 4 && $totalPages > 5) {
+                                            $startPage = max(1, $endPage - 4);
+                                        }
+
+                                        for ($i = $startPage; $i <= $endPage; $i++):
+                                        ?>
+                                            <li class="page-item <?php echo ($i == $currentPage) ? 'active' : ''; ?>">
+                                                <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                            </li>
+                                        <?php endfor; ?>
+
+                                        <!-- Next button -->
+                                        <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage + 1; ?>" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Logout Modal -->
+            <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content bg-dark text-light">
+                        <div class="modal-header border-bottom border-secondary">
+                            <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to log out?
+                        </div>
+                        <div class="modal-footer border-top border-secondary">
+                            <button type="button" class="btn border-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                            <form action="../admin/logout.php" method="POST">
+                                <button type="submit" class="btn btn-danger">Logout</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table id="timesheet" class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Employee</th>
-                                <th>Time-In</th>
-                                <th>Time-Out</th>
-                                <th>Total Hours</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($paginatedRecords)): ?>
-                                <tr>
-                                    <td colspan="6" class="text-center">No data available for the selected criteria.</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($paginatedRecords as $record): ?>
-                                    <tr>
-                                        <td><?php echo date('F j, Y', strtotime($record['attendance_date'])); ?></td>
-                                        <td><?php echo $record['name']; ?></td>
-                                        <td><?php echo $record['time_in']; ?></td>
-                                        <td><?php echo $record['time_out']; ?></td>
-                                        <td><?php echo isset($record['total_hours']) ? $record['total_hours'] : 'N/A'; ?></td>
-                                        <td>
-                                            <?php
-                                            // Set badge class based on status
-                                            $statusClass = '';
-                                            $status = $record['status'];
-                                            
-                                            if (strpos($status, 'Present') !== false) {
-                                                $statusClass = 'badge-present';
-                                            } elseif (strpos($status, 'Late') !== false) {
-                                                $statusClass = 'badge-late';
-                                            } elseif (strpos($status, 'Overtime') !== false) {
-                                                $statusClass = 'badge-overtime';
-                                            } elseif (strpos($status, 'Holiday') !== false) {
-                                                $statusClass = 'badge-holiday';
-                                            } elseif (strpos($status, 'Leave') !== false) {
-                                                $statusClass = 'badge-leave';
-                                            } elseif (strpos($status, 'Day Off') !== false) {
-                                                $statusClass = 'badge-dayoff';
-                                            } elseif (strpos($status, 'Absent') !== false) {
-                                                $statusClass = 'badge-absent';
-                                            } elseif (strpos($status, 'No Record') !== false) {
-                                                $statusClass = 'badge-norecord';
-                                            }
-                                            ?>
-                                            <span class="badge <?php echo $statusClass; ?>"><?php echo $status; ?></span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="card-footer">
-                <div class="pagination-info">
-                    Showing <?php echo min($startIndex + 1, $totalRecords); ?> to <?php echo min($startIndex + $entriesPerPage, $totalRecords); ?> of <?php echo $totalRecords; ?> entries
-                </div>
-                
-                <?php if ($totalPages > 1): ?>
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                        <!-- Previous button -->
-                        <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
-                        
-                        <!-- Page numbers -->
-                        <?php
-                        $startPage = max(1, $currentPage - 2);
-                        $endPage = min($totalPages, $startPage + 4);
-                        if ($endPage - $startPage < 4 && $totalPages > 5) {
-                            $startPage = max(1, $endPage - 4);
-                        }
-                        
-                        for ($i = $startPage; $i <= $endPage; $i++): 
-                        ?>
-                            <li class="page-item <?php echo ($i == $currentPage) ? 'active' : ''; ?>">
-                                <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $i; ?>"><?php echo $i; ?></a>
-                            </li>
-                        <?php endfor; ?>
-                        
-                        <!-- Next button -->
-                        <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?month=<?php echo $selectedMonth; ?>&year=<?php echo $selectedYear; ?>&search_name=<?php echo urlencode($searchName); ?>&page=<?php echo $currentPage + 1; ?>" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-                <?php endif; ?>
-            </div>
+
+            <?php include 'footer.php' ?>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/admin.js"></script>
     <script>
         // Function to export table data to CSV
         function exportToCSV() {
             const table = document.getElementById('timesheet');
             let csv = [];
             const rows = table.querySelectorAll('tr');
-            
+
             for (let i = 0; i < rows.length; i++) {
                 const row = [], cols = rows[i].querySelectorAll('td, th');
-                
+
                 for (let j = 0; j < cols.length; j++) {
                     // Get the text content and replace any commas with spaces to avoid CSV issues
                     let data = cols[j].textContent.replace(/,/g, ' ');
@@ -648,23 +716,32 @@ $paginatedRecords = array_slice($employeeAttendance, $startIndex, $entriesPerPag
                     // Wrap the data in double quotes
                     row.push('"' + data + '"');
                 }
-                
+
                 csv.push(row.join(','));
             }
-            
+
             // Create a CSV file and download it
             const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
             const downloadLink = document.createElement('a');
-            
+
             // Create a download link
             downloadLink.download = 'timesheet_' + new Date().toISOString().slice(0, 10) + '.csv';
             downloadLink.href = window.URL.createObjectURL(csvFile);
             downloadLink.style.display = 'none';
-            
+
             // Add the link to the DOM and trigger the download
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
+        }
+
+        function toggleCalendar() {
+            const calendarContainer = document.getElementById('calendarContainer');
+            if (calendarContainer.style.display === 'none' || calendarContainer.style.display === '') {
+                calendarContainer.style.display = 'block';
+            } else {
+                calendarContainer.style.display = 'none';
+            }
         }
     </script>
 </body>

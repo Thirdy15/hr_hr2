@@ -240,16 +240,14 @@ $conn->close();
                                             <div class="p-3">
                                                 <h5>Overall Available Leave</h5>
                                                 <p class="fs-4 text-success"><?php echo htmlspecialchars($remainingLeaves); ?> days</p>
-                                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#leaveDetailsModal">
-                                                    View leave details
-                                                </button>
+                                                <a class="btn btn-success" href="../../employee/supervisor/leaveDetails.php"> View leave Details</a>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="p-3">
                                                 <h5>Used Leave</h5>
                                                 <p class="fs-4 text-danger"><?php echo htmlspecialchars($usedLeave); ?> days</p>
-                                                <a class="btn btn-danger" href="../../employee/supervisor/leaveHistory.php"> View leave history</a>
+                                                <a class="btn btn-danger" href="../../employee/supervisor/leaveHistory.php"> View leave History</a>
                                             </div>
                                         </div>
                                     </div>

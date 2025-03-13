@@ -17,14 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Fetch reaction count from the database, ensuring one reaction per account
-    $sql = "SELECT COUNT(DISTINCT admin_id) AS count FROM employee_reactions WHERE employee_id = ?";
+    // Fetch reaction count from the database
+    $sql = "SELECT COUNT(*) AS count FROM employee_reactions WHERE employee_id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $employeeId);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
-
 
     if ($row) {
         echo json_encode(['status' => 'success', 'count' => $row['count']]);

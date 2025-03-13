@@ -309,13 +309,13 @@ $total_pending = $count_row['total'];
             --primary-color: #6366f1;
             --primary-hover: #4f46e5;
             --secondary-color: #10b981;
-            --dark-bg: #111827;
-            --darker-bg: #0f172a;
-            --card-bg: #1e293b;
-            --border-color: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
+            --dark-bg: #000000;
+            --darker-bg: #000000;
+            --card-bg: #121212;
+            --border-color: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #e0e0e0;
+            --text-muted: #a0a0a0;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -375,7 +375,7 @@ $total_pending = $count_row['total'];
         .table th {
             font-weight: 600;
             border-bottom: 2px solid var(--border-color);
-            background-color: rgba(0, 0, 0, 0.1);
+            background-color: #1a1a1a;
             padding: 0.75rem 1rem;
             white-space: nowrap;
         }
@@ -698,11 +698,64 @@ $total_pending = $count_row['total'];
         .bs-tooltip-top .tooltip-arrow::before {
             border-top-color: var(--border-color);
         }
+
+        /* Calendar styling */
+        #calendar {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border-radius: 0.75rem;
+        }
+
+        .fc-theme-standard .fc-scrollgrid, 
+        .fc-theme-standard td, 
+        .fc-theme-standard th {
+            border-color: var(--border-color);
+        }
+
+        .fc .fc-daygrid-day-number,
+        .fc .fc-col-header-cell-cushion {
+            color: var(--text-primary);
+        }
+
+        .fc-daygrid-day.fc-day-today {
+            background-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .fc-button-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .fc-button-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        /* Dropdown menu styling */
+        .dropdown-menu {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .dropdown-item {
+            color: var(--text-primary);
+        }
+
+        .dropdown-item:hover, .dropdown-item:focus {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .dropdown-divider {
+            border-top: 1px solid var(--border-color);
+        }
     </style>
 </head>
 
 <body class="sb-nav-fixed">
-    <?php include 'navbar.php'; ?>
+<?php include 'navbar.php'; ?>'
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">

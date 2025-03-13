@@ -2,7 +2,7 @@
 session_start();
 include '../../db/db_conn.php';
 
-if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Supervisor') {
+if (!isset($_SESSION['e_id']) || !isset($_SESSION['position']) || $_SESSION['position'] !== 'Staff') {
     header("Location: ../../login.php");
     exit();
 }
@@ -151,7 +151,7 @@ $conn->close();
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="text-light mb-0">Leave Details</h2>
             <div>
-                <a href="../../employee/supervisor/leave_file.php" class="btn btn-primary">Back</a>
+                <a href="../../employee/staff/leave_file.php" class="btn btn-primary">Back</a>
                 <?php if ($approved_leave_data): ?>
                     <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#leaveScheduleModal">
                         View Ongoing Leave Schedule
