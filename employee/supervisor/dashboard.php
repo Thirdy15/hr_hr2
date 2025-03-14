@@ -72,9 +72,9 @@ $profilePicture = !empty($employeeInfo['pfp']) ? $employeeInfo['pfp'] : '../../i
     <meta name="description" content="" />
     <meta name="author" content="" />
     <title>Employee Dashboard | HR2</title>
+    <link href="../../css/styles.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <link href="../../css/styles.css" rel="stylesheet" />
     <link href="../../css/calendar.css" rel="stylesheet"/>
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet'/>
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>

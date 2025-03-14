@@ -19,7 +19,7 @@ $loggedInUserId = $_SESSION['e_id'];
 $employeeInfo = [];
 
 // Fetch employee details (name, ID, department, and position)
-$employeeQuery = "SELECT e_id, CONCAT(firstname, ' ', lastname) AS name, department, position 
+$employeeQuery = "SELECT e_id, firstname, middlename, role, lastname, department, position 
                   FROM employee_register 
                   WHERE e_id = ?";
 if ($employeeStmt = $conn->prepare($employeeQuery)) {
@@ -142,6 +142,14 @@ if ($leaveStmt = $conn->prepare($leaveQuery)) {
     die("Error preparing leave statement: " . $conn->error);
 }
 
+
+// Fetch notifications for the employee
+$notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
+$notificationStmt = $conn->prepare($notificationQuery);
+$notificationStmt->bind_param("i", $employeeId);
+$notificationStmt->execute();
+$notifications = $notificationStmt->get_result();
+
 // Close the database connection
 $conn->close();
 
@@ -188,7 +196,7 @@ for ($day = 1; $day <= $numberOfDays; $day++) {
 
     $allDatesInMonth[$dateStr] = [
         'e_id' => $loggedInUserId,
-        'name' => $employeeInfo['name'], // Use the fetched employee name
+        'name' => $employeeInfo['firstname'] . ' ' . $employeeInfo['lastname'], // Use the fetched employee name
         'attendance_date' => $dateStr,
         'time_in' => null,
         'time_out' => null,
@@ -242,7 +250,9 @@ $totalWorkMinutes = $totalWorkMinutes % 60;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Timesheet</title>
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../css/styles.css" rel="stylesheet">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href='../../css/calendar.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -256,9 +266,9 @@ $totalWorkMinutes = $totalWorkMinutes % 60;
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
             --info-color: #3498db;
-            --dark-bg: #121212;
-            --darker-bg: #0a0a0a;
-            --card-bg: #1e1e1e;
+            --bg-black: rgba(16, 17 ,18) !important;
+            --bg-dark: rgba(33, 37, 41) !important;
+            --card-bg:  rgba(33, 37, 41) !important;
             --border-color: #333;
             --text-primary: #ffffff;
             --text-secondary: #b3b3b3;
@@ -266,7 +276,7 @@ $totalWorkMinutes = $totalWorkMinutes % 60;
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--dark-bg);
+            background-color: var(--bg-black);
             color: var(--text-primary);
             line-height: 1.6;
         }
@@ -664,280 +674,300 @@ $totalWorkMinutes = $totalWorkMinutes % 60;
     </style>
 </head>
 
-<body>
-    <div class="container">
-        <div class="page-header">
-            <h1 class="page-title">Employee Timesheet</h1>
-            <p class="text-secondary">Track your attendance and working hours</p>
-        </div>
-        
-        <!-- Employee Information Card -->
-        <div class="card employee-info-card fade-in">
-            <div class="card-header employee-info-header">
-                <h5 class="mb-0"><i class="fas fa-id-card"></i> Employee Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <i class="fas fa-user"></i>
-                            <div>
-                                <div class="info-label">Name</div>
-                                <div class="info-value"><?php echo $employeeInfo['name']; ?></div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-id-badge"></i>
-                            <div>
-                                <div class="info-label">Employee ID</div>
-                                <div class="info-value"><?php echo $employeeInfo['e_id']; ?></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <i class="fas fa-building"></i>
-                            <div>
-                                <div class="info-label">Department</div>
-                                <div class="info-value"><?php echo $employeeInfo['department']; ?></div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="fas fa-briefcase"></i>
-                            <div>
-                                <div class="info-label">Position</div>
-                                <div class="info-value"><?php echo $employeeInfo['position']; ?></div>
-                            </div>
+<body class="sb-nav-fixed">
+    <?php include 'navbar.php'; ?>
+    <div id="layoutSidenav">
+        <?php include 'sidebar.php'; ?>
+        <div id="layoutSidenav_content">
+            <main>
+                <div class="container" id="calendarContainer" 
+                    style="position: fixed; top: 9%; right: 0; z-index: 1050; 
+                    width: 700px; display: none;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="calendar" class="p-2"></div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Month and Year Selector -->
-        <div class="month-selector fade-in" style="animation-delay: 0.1s;">
-            <form method="GET" class="row align-items-end">
-                <div class="col-md-4">
-                    <label for="month" class="form-label">Month</label>
-                    <select name="month" id="month" class="form-select">
-                        <?php for ($i = 1; $i <= 12; $i++): ?>
-                            <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
-                                <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
-                            </option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="year" class="form-label">Year</label>
-                    <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-2"></i> Apply Filter
-                    </button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- Attendance Statistics -->
-        <div class="row fade-in" style="animation-delay: 0.2s;">
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="stats-card stats-present">
-                    <div class="stats-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="stats-value"><?php echo $presentDays; ?></div>
-                    <div class="stats-label">Present Days</div>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($presentDays / $totalWorkDays * 100) : 0; ?>%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="stats-card stats-late">
-                    <div class="stats-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stats-value"><?php echo $lateDays; ?></div>
-                    <div class="stats-label">Late Days</div>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($lateDays / $totalWorkDays * 100) : 0; ?>%"></div>
+                <div class="container-fluid px-4">
+                    <div class="page-header">
+                        <h1 class="page-title">Employee Timesheet</h1>
+                        <p class="text-secondary">Track your attendance and working hours</p>
                     </div>
                     
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="stats-card stats-absent">
-                    <div class="stats-icon">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                    <div class="stats-value"><?php echo $absentDays; ?></div>
-                    <div class="stats-label">Absent Days</div>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($absentDays / $totalWorkDays * 100) : 0; ?>%"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="stats-card stats-hours">
-                    <div class="stats-icon">
-                        <i class="fas fa-hourglass-half"></i>
-                    </div>
-                    <div class="stats-value"><?php echo $totalWorkHours; ?><span class="fs-6"><?php echo ($totalWorkMinutes > 0) ? ':'.$totalWorkMinutes : ''; ?></span></div>
-                    <div class="stats-label">Total Work Hours</div>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: <?php echo min(100, ($totalWorkHours / 160) * 100); ?>%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Attendance Rate Card -->
-        <div class="card fade-in" style="animation-delay: 0.3s;">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Attendance Overview</h5>
-            </div>
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <h4 class="mb-3">Attendance Rate</h4>
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="display-4 fw-bold me-3"><?php echo $attendanceRate; ?>%</div>
-                            <div>
-                                <div class="text-secondary mb-1">Present + Late Days</div>
-                                <div class="fs-5"><?php echo ($presentDays + $lateDays); ?> of <?php echo $totalWorkDays; ?> work days</div>
-                            </div>
+                    <!-- Employee Information Card -->
+                    <div class="card employee-info-card fade-in">
+                        <div class="card-header employee-info-header">
+                            <h5 class="mb-0"><i class="fas fa-id-card"></i> Employee Information</h5>
                         </div>
-                        <div class="progress" style="height: 15px;">
-                            <div class="progress-bar" style="width: <?php echo $attendanceRate; ?>%"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
-                                        <i class="fas fa-calendar-check"></i>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <i class="fas fa-user"></i>
+                                        <div>
+                                            <div class="info-label">Name</div>
+                                            <div class="info-value"><?php echo $employeeInfo['firstname'] . ' ' . $employeeInfo['lastname']; ?></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-secondary fs-6">Work Days</div>
-                                        <div class="fs-5 fw-bold"><?php echo $totalWorkDays; ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(142, 68, 173, 0.15); color: #9b59b6;">
-                                        <i class="fas fa-glass-cheers"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-secondary fs-6">Holidays</div>
-                                        <div class="fs-5 fw-bold"><?php echo $holidayDays; ?></div>
+                                    <div class="info-item">
+                                        <i class="fas fa-id-badge"></i>
+                                        <div>
+                                            <div class="info-label">Employee ID</div>
+                                            <div class="info-value"><?php echo $employeeInfo['e_id']; ?></div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(52, 152, 219, 0.15); color: var(--info-color);">
-                                        <i class="fas fa-umbrella-beach"></i>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <i class="fas fa-building"></i>
+                                        <div>
+                                            <div class="info-label">Department</div>
+                                            <div class="info-value"><?php echo $employeeInfo['department']; ?></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-secondary fs-6">Leave Days</div>
-                                        <div class="fs-5 fw-bold"><?php echo $leaveDays; ?></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(149, 165, 166, 0.15); color: #95a5a6;">
-                                        <i class="fas fa-couch"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-secondary fs-6">Day Offs</div>
-                                        <div class="fs-5 fw-bold"><?php echo $numberOfDays - $totalWorkDays - $holidayDays - $leaveDays; ?></div>
+                                    <div class="info-item">
+                                        <i class="fas fa-briefcase"></i>
+                                        <div>
+                                            <div class="info-label">Position</div>
+                                            <div class="info-value"><?php echo $employeeInfo['position']; ?></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Month and Year Selector -->
+                    <div class="month-selector fade-in" style="animation-delay: 0.1s;">
+                        <form method="GET" class="row align-items-end">
+                            <div class="col-md-4">
+                                <label for="month" class="form-label">Month</label>
+                                <select name="month" id="month" class="form-select">
+                                    <?php for ($i = 1; $i <= 12; $i++): ?>
+                                        <option value="<?php echo $i; ?>" <?php echo ($i == $selectedMonth) ? 'selected' : ''; ?>>
+                                            <?php echo date('F', mktime(0, 0, 0, $i, 10)); ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="year" class="form-label">Year</label>
+                                <input type="number" name="year" id="year" class="form-control" value="<?php echo $selectedYear; ?>" min="2000" max="<?php echo date('Y'); ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-2"></i> Apply Filter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Attendance Statistics -->
+                    <div class="row fade-in" style="animation-delay: 0.2s;">
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="stats-card stats-present">
+                                <div class="stats-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stats-value"><?php echo $presentDays; ?></div>
+                                <div class="stats-label">Present Days</div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($presentDays / $totalWorkDays * 100) : 0; ?>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="stats-card stats-late">
+                                <div class="stats-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stats-value"><?php echo $lateDays; ?></div>
+                                <div class="stats-label">Late Days</div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($lateDays / $totalWorkDays * 100) : 0; ?>%"></div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="stats-card stats-absent">
+                                <div class="stats-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="stats-value"><?php echo $absentDays; ?></div>
+                                <div class="stats-label">Absent Days</div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: <?php echo ($totalWorkDays > 0) ? ($absentDays / $totalWorkDays * 100) : 0; ?>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="stats-card stats-hours">
+                                <div class="stats-icon">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <div class="stats-value"><?php echo $totalWorkHours; ?><span class="fs-6"><?php echo ($totalWorkMinutes > 0) ? ':'.$totalWorkMinutes : ''; ?></span></div>
+                                <div class="stats-label">Total Work Hours</div>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: <?php echo min(100, ($totalWorkHours / 160) * 100); ?>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Rate Card -->
+                    <div class="card fade-in" style="animation-delay: 0.3s;">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Attendance Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4 class="mb-3">Attendance Rate</h4>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="display-4 fw-bold me-3"><?php echo $attendanceRate; ?>%</div>
+                                        <div>
+                                            <div class="text-secondary mb-1">Present + Late Days</div>
+                                            <div class="fs-5"><?php echo ($presentDays + $lateDays); ?> of <?php echo $totalWorkDays; ?> work days</div>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 15px;">
+                                        <div class="progress-bar" style="width: <?php echo $attendanceRate; ?>%"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="row">
+                                        <div class="col-6 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                                    <i class="fas fa-calendar-check"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-secondary fs-6">Work Days</div>
+                                                    <div class="fs-5 fw-bold"><?php echo $totalWorkDays; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(142, 68, 173, 0.15); color: #9b59b6;">
+                                                    <i class="fas fa-glass-cheers"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-secondary fs-6">Holidays</div>
+                                                    <div class="fs-5 fw-bold"><?php echo $holidayDays; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(52, 152, 219, 0.15); color: var(--info-color);">
+                                                    <i class="fas fa-umbrella-beach"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-secondary fs-6">Leave Days</div>
+                                                    <div class="fs-5 fw-bold"><?php echo $leaveDays; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="stats-icon me-2" style="width: 30px; height: 30px; font-size: 0.9rem; background-color: rgba(149, 165, 166, 0.15); color: #95a5a6;">
+                                                    <i class="fas fa-couch"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-secondary fs-6">Day Offs</div>
+                                                    <div class="fs-5 fw-bold"><?php echo $numberOfDays - $totalWorkDays - $holidayDays - $leaveDays; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Log Table -->
+                    <div class="card fade-in" style="animation-delay: 0.4s;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Timesheet</h5>
+                            <form method="POST" action="../../employee_db/supervisor/reportTimesheet.php">
+                                <input type="hidden" name="month" value="<?php echo $selectedMonth; ?>">
+                                <input type="hidden" name="year" value="<?php echo $selectedYear; ?>">
+                                <button type="submit" name="download_excel" class="btn btn-success">
+                                    <i class="fas fa-download me-2"></i> Export to Excel
+                                </button>
+                            </form>
+                        </div>
+                        <div class="card-body">
+                            <table id="timesheetTable" class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Day</th>
+                                        <th>Time-In</th>
+                                        <th>Time-Out</th>
+                                        <th>Total Hours</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($allDatesInMonth)): ?>
+                                        <tr>
+                                            <td colspan="6" class="text-center">No data available for the selected month and year.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($allDatesInMonth as $date => $log): ?>
+                                            <?php 
+                                                $dateObj = new DateTime($date);
+                                                $dayName = $dateObj->format('l');
+                                                $isWeekend = ($dayName == 'Saturday' || $dayName == 'Sunday');
+                                                
+                                                // Determine badge class based on status
+                                                $badgeClass = '';
+                                                if (strpos($log['status'], 'Present') !== false) {
+                                                    $badgeClass = 'badge-present';
+                                                } elseif (strpos($log['status'], 'Late') !== false) {
+                                                    $badgeClass = 'badge-late';
+                                                } elseif (strpos($log['status'], 'Absent') !== false) {
+                                                    $badgeClass = 'badge-absent';
+                                                } elseif (strpos($log['status'], 'Holiday') !== false) {
+                                                    $badgeClass = 'badge-holiday';
+                                                } elseif (strpos($log['status'], 'Leave') !== false) {
+                                                    $badgeClass = 'badge-leave';
+                                                } elseif (strpos($log['status'], 'Day Off') !== false) {
+                                                    $badgeClass = 'badge-dayoff';
+                                                } else {
+                                                    $badgeClass = 'badge-norecord';
+                                                }
+                                            ?>
+                                            <tr class="<?php echo $isWeekend ? 'table-secondary bg-opacity-10' : ''; ?>">
+                                                <td><?php echo date('F j, Y', strtotime($date)); ?></td>
+                                                <td><?php echo $dayName; ?></td>
+                                                <td><?php echo $log['time_in'] ? date('g:i a', strtotime($log['time_in'])) : 'N/A'; ?></td>
+                                                <td><?php echo $log['time_out'] ? date('g:i a', strtotime($log['time_out'])) : 'N/A'; ?></td>
+                                                <td><?php echo $log['total_hours']; ?></td>
+                                                <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $log['status']; ?></span></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Attendance Log Table -->
-        <div class="card fade-in" style="animation-delay: 0.4s;">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Timesheet</h5>
-                <form method="POST" action="../../employee_db/supervisor/reportTimesheet.php">
-                    <input type="hidden" name="month" value="<?php echo $selectedMonth; ?>">
-                    <input type="hidden" name="year" value="<?php echo $selectedYear; ?>">
-                    <button type="submit" name="download_excel" class="btn btn-success">
-                        <i class="fas fa-download me-2"></i> Export to Excel
-                    </button>
-                </form>
-            </div>
-            <div class="card-body">
-                <table id="timesheetTable" class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Day</th>
-                            <th>Time-In</th>
-                            <th>Time-Out</th>
-                            <th>Total Hours</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($allDatesInMonth)): ?>
-                            <tr>
-                                <td colspan="6" class="text-center">No data available for the selected month and year.</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($allDatesInMonth as $date => $log): ?>
-                                <?php 
-                                    $dateObj = new DateTime($date);
-                                    $dayName = $dateObj->format('l');
-                                    $isWeekend = ($dayName == 'Saturday' || $dayName == 'Sunday');
-                                    
-                                    // Determine badge class based on status
-                                    $badgeClass = '';
-                                    if (strpos($log['status'], 'Present') !== false) {
-                                        $badgeClass = 'badge-present';
-                                    } elseif (strpos($log['status'], 'Late') !== false) {
-                                        $badgeClass = 'badge-late';
-                                    } elseif (strpos($log['status'], 'Absent') !== false) {
-                                        $badgeClass = 'badge-absent';
-                                    } elseif (strpos($log['status'], 'Holiday') !== false) {
-                                        $badgeClass = 'badge-holiday';
-                                    } elseif (strpos($log['status'], 'Leave') !== false) {
-                                        $badgeClass = 'badge-leave';
-                                    } elseif (strpos($log['status'], 'Day Off') !== false) {
-                                        $badgeClass = 'badge-dayoff';
-                                    } else {
-                                        $badgeClass = 'badge-norecord';
-                                    }
-                                ?>
-                                <tr class="<?php echo $isWeekend ? 'table-secondary bg-opacity-10' : ''; ?>">
-                                    <td><?php echo date('F j, Y', strtotime($date)); ?></td>
-                                    <td><?php echo $dayName; ?></td>
-                                    <td><?php echo $log['time_in'] ? date('g:i a', strtotime($log['time_in'])) : 'N/A'; ?></td>
-                                    <td><?php echo $log['time_out'] ? date('g:i a', strtotime($log['time_out'])) : 'N/A'; ?></td>
-                                    <td><?php echo $log['total_hours']; ?></td>
-                                    <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $log['status']; ?></span></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+            </main>
+            <?php include 'footer.php'; ?>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../js/employee.js"></script>
     
     <script>
         // Initialize DataTable

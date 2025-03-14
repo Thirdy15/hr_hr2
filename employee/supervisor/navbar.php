@@ -5,7 +5,7 @@
         }
 
         /* Notification Count Badge */
-        .badge {
+        .badgeN {
             position: absolute;
             top: -5px;
             right: -5px;
@@ -120,7 +120,7 @@
             <div class="dropdown ms-3 d-none d-md-inline-block form-inline">
                 <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-bell text-light fs-2"></i>
-                    <span class="badge bg-danger" id="notificationCount">0</span> <!-- Notification Count -->
+                    <span class="badgeN bg-danger" id="notificationCount">0</span> <!-- Notification Count -->
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end mt-3" aria-labelledby="notificationDropdown" id="notificationList" style="width: 400px;">
                     <?php if ($notifications->num_rows > 0) : ?>

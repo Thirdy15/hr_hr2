@@ -1082,10 +1082,6 @@ function getComments($conn, $employeeId) {
                     </div>
                 </div>
             </div>
-            <div class='navigation-buttons'>
-                            <button class='btn btn-primary' onclick='showPreviousEmployee(1)'>Previous</button>
-                            <button class='btn btn-primary' onclick='showNextEmployee(1)'>Next</button>
-                        </div>
         <?php include 'footer.php'; ?>
     </div>
     <div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
@@ -1181,37 +1177,6 @@ function getComments($conn, $employeeId) {
     let currentCategoryIndex = 1;
     const totalCategories = 6; // Assuming there are 6 categories (5 criteria + all employees)
     let currentEmployeeIndex = {};
-
-    function showNextEmployee(categoryIndex) {
-        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-        if (!currentEmployeeIndex[categoryIndex]) {
-            currentEmployeeIndex[categoryIndex] = 1;
-        }
-
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
-    }
-
-    function showPreviousEmployee(categoryIndex) {
-        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
-        if (!currentEmployeeIndex[categoryIndex]) {
-            currentEmployeeIndex[categoryIndex] = 1;
-        }
-
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
-        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
-        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
-    }
-
-    window.onload = function() {
-        // Show the first category and first employee immediately
-        document.getElementById(`category-1`).style.display = 'block';
-        document.getElementById(`employee-1-1`).style.display = 'block';
-
-        // Auto display all employees
-        document.getElementById(`employee-all-1`).style.display = 'block';
-    };
 
     function showNextCategory() {
         // Hide the current category
@@ -1554,7 +1519,38 @@ function getComments($conn, $employeeId) {
             .catch(error => console.error('Error:', error));
         }
     }
-    
+
+    function showNextEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] % totalEmployees) + 1;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    function showPreviousEmployee(categoryIndex) {
+        const totalEmployees = document.querySelectorAll(`#category-${categoryIndex} .employee-card`).length;
+        if (!currentEmployeeIndex[categoryIndex]) {
+            currentEmployeeIndex[categoryIndex] = 1;
+        }
+
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'none';
+        currentEmployeeIndex[categoryIndex] = (currentEmployeeIndex[categoryIndex] - 1) || totalEmployees;
+        document.getElementById(`employee-${categoryIndex}-${currentEmployeeIndex[categoryIndex]}`).style.display = 'block';
+    }
+
+    window.onload = function() {
+        // Show the first category and first employee immediately
+        document.getElementById(`category-1`).style.display = 'block';
+        document.getElementById(`employee-1-1`).style.display = 'block';
+
+        // Auto display all employees
+        document.getElementById(`employee-all-1`).style.display = 'block';
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         const commentList = document.querySelector('.comment-list');
 

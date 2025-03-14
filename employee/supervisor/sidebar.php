@@ -33,7 +33,7 @@
                                 <span class="big text-light">
                                     <?php
                                         if ($employeeInfo) {
-                                        echo htmlspecialchars($employeeInfo['role']);
+                                        echo htmlspecialchars($employeeInfo['position']);
                                         } else {
                                         echo "User information not available.";
                                         }
@@ -87,17 +87,6 @@
                         <div class="collapse" id="collapseSR" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
                             <nav class="sb-sidenav-menu-nested nav">
                                 <a class="nav-link text-light loading" href="../../employee/supervisor/awardee.php">Awardee</a>
-                            </nav>
-                        </div> 
-                        <div class="sb-sidenav-menu-heading text-center text-muted border-top border-1 border-secondary mt-3">Feedback</div> 
-                        <a class="nav-link collapsed text-light" href="#" data-bs-toggle="collapse" data-bs-target="#collapseFB" aria-expanded="false" aria-controls="collapseFB">
-                            <div class="sb-nav-link-icon"><i class="fas fa-exclamation-circle"></i></div>
-                            Report Issue
-                            <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
-                        </a>
-                        <div class="collapse" id="collapseFB" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
-                            <nav class="sb-sidenav-menu-nested nav">
-                                <a class="nav-link text-light" href="">Report Issue</a>
                             </nav>
                         </div> 
                     </div>

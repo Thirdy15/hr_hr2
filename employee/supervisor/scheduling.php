@@ -42,6 +42,13 @@ $stmt = $conn->prepare($query);
 $stmt->bind_param('ii', $recordsPerPage, $offset);
 $stmt->execute();
 $result = $stmt->get_result();
+
+// Fetch notifications for the employee
+$notificationQuery = "SELECT * FROM notifications WHERE employee_id = ? ORDER BY created_at DESC";
+$notificationStmt = $conn->prepare($notificationQuery);
+$notificationStmt->bind_param("i", $employeeId);
+$notificationStmt->execute();
+$notifications = $notificationStmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -51,16 +58,15 @@ $result = $stmt->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Schedule</title>
     <link href='../../css/styles.css' rel='stylesheet' />
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for icons -->
+    <link href='../../css/calendar.css' rel='stylesheet' />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     <!-- Custom CSS -->
     <style>
         :root {
-            --dark-bg: #121212;
-            --darker-bg: #0a0a0a;
-            --card-bg: #1e1e1e;
+            --bg-black: rgba(16, 17 ,18) !important;
+            --bg-dark: rgba(33, 37, 41) !important;
+            --card-bg:  rgba(33, 37, 41) !important;
             --border-color: #333;
             --text-primary: #ffffff;
             --text-secondary: #b3b3b3;
@@ -147,7 +153,7 @@ $result = $stmt->get_result();
             background-color: rgba(255, 255, 255, 0.02);
         }
 
-        .badge {
+        .badgeSheet {
             font-size: 12px;
             font-weight: 500;
             padding: 6px 10px;
@@ -346,32 +352,6 @@ $result = $stmt->get_result();
             border-color: var(--border-color);
         }
 
-        /* Sidebar and Content Layout */
-        #layoutSidenav {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        #layoutSidenav_nav {
-            width: 250px; /* Fixed width for the sidebar */
-            height: 100vh; /* Full height */
-            position: fixed; /* Fixed position */
-            top: 0;
-            left: 0;
-            z-index: 1000; /* Ensure it's above other content */
-            overflow-y: auto; /* Enable scrolling if content is long */
-            background-color: var(--darker-bg); /* Dark background */
-            color: var(--text-primary); /* Light text */
-            transition: left 0.3s; /* Smooth transition for sidebar toggle */
-        }
-
-        #layoutSidenav_content {
-            margin-left: 250px; /* Offset content by sidebar width */
-            flex-grow: 1; /* Allow content to take remaining space */
-            padding: 20px; /* Add some padding */
-            transition: margin-left 0.3s; /* Smooth transition for sidebar toggle */
-        }
-
         /* Adjustments for smaller screens */
         @media (max-width: 768px) {
             #layoutSidenav_nav {
@@ -397,135 +377,145 @@ $result = $stmt->get_result();
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
-            <main id="main-content">
+            <main>
+                <div class="container-fluid" id="calendarContainer" 
+                    style="position: fixed; top: 7%; right: 40; z-index: 1050; 
+                    max-width: 100%; display: none;">
+                    <div class="row">
+                        <div class="col-md-9 mx-auto">
+                            <div id="calendar" class="p-2"></div>
+                        </div>
+                    </div>
+                </div> 
                 <div class="container-fluid position-relative px-4">
                     <div class="">
                         <div class="row align-items-center">
                             <div class="col">
                                 <h1 class="page-title">
-                                    <i class="fas fa-calendar-alt me-2 text-light"></i>Employee Schedule
+                                    Employee Schedule
                                 </h1>
                             </div>
-                            <div>
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkEditModal">
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-primary mt-5 mb-3" data-bs-toggle="modal" data-bs-target="#bulkEditModal">
                                     <i class="fas fa-users me-2"></i>Bulk Edit Schedules
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center text-white">
-                        <div>
-                            <i class="fas fa-table me-2 text-white"></i>Schedule Overview
-                        </div>
-                        <div class="d-flex gap-2">
-                            <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Search employee..." id="searchInput">
-                                <button class="btn btn-outline-secondary" type="button" id="searchButton">
-                                    <i class="fas fa-search"></i>
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center text-white">
+                            <div>
+                                <i class="fas fa-table me-2 text-white"></i>Schedule Overview
+                            </div>
+                            <div class="d-flex gap-2">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search employee..." id="searchInput">
+                                    <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                <button class="btn btn-outline-secondary" id="refreshButton">
+                                    <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
-                            <button class="btn btn-outline-secondary" id="refreshButton">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
                         </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="scheduleTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Employee Name</th>
-                                    <th>Shift Type</th>
-                                    <th>Schedule Date</th>
-                                    <th>Start Time</th>
-                                    <th>End Time</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($result->num_rows > 0): ?>
-                                    <?php while ($employee = $result->fetch_assoc()): ?>
-                                        <?php
-                                        // Fetch the employee's schedule
-                                        $scheduleQuery = "SELECT * FROM employee_schedule WHERE employee_id = ? ORDER BY schedule_date DESC LIMIT 1";
-                                        $stmt = $conn->prepare($scheduleQuery);
-                                        $stmt->bind_param('i', $employee['e_id']);
-                                        $stmt->execute();
-                                        $scheduleResult = $stmt->get_result();
-                                        $schedule = $scheduleResult->fetch_assoc();
-                                        $stmt->close();
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="scheduleTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Employee Name</th>
+                                        <th>Shift Type</th>
+                                        <th>Schedule Date</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if ($result->num_rows > 0): ?>
+                                        <?php while ($employee = $result->fetch_assoc()): ?>
+                                            <?php
+                                            // Fetch the employee's schedule
+                                            $scheduleQuery = "SELECT * FROM employee_schedule WHERE employee_id = ? ORDER BY schedule_date DESC LIMIT 1";
+                                            $stmt = $conn->prepare($scheduleQuery);
+                                            $stmt->bind_param('i', $employee['e_id']);
+                                            $stmt->execute();
+                                            $scheduleResult = $stmt->get_result();
+                                            $schedule = $scheduleResult->fetch_assoc();
+                                            $stmt->close();
 
-                                        // Determine shift badge class
-                                        $shiftType = $schedule['shift_type'] ?? 'day';
-                                        $badgeClass = ($shiftType == 'night') ? 'badge-night' : 'badge-day';
-                                        ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($employee['e_id']); ?></td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="avatar-circle me-2 bg-secondary">
-                                                        <?php echo strtoupper(substr($employee['firstname'], 0, 1)); ?>
+                                            // Determine shift badge class
+                                            $shiftType = $schedule['shift_type'] ?? 'day';
+                                            $badgeClass = ($shiftType == 'night') ? 'badge-night' : 'badge-day';
+                                            ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($employee['e_id']); ?></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-circle me-2 bg-secondary">
+                                                            <?php echo strtoupper(substr($employee['firstname'], 0, 1)); ?>
+                                                        </div>
+                                                        <?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>
                                                     </div>
-                                                    <?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>
+                                                </td>
+                                                <td>
+                                                    <span class="badgeSheet <?php echo $badgeClass; ?>">
+                                                        <?php echo ucfirst(htmlspecialchars($schedule['shift_type'] ?? 'N/A')); ?> Shift
+                                                    </span>
+                                                </td>
+                                                <td><?php echo htmlspecialchars($schedule['schedule_date'] ?? 'Not Scheduled'); ?></td>
+                                                <td><?php echo htmlspecialchars($schedule['start_time'] ?? 'N/A'); ?></td>
+                                                <td><?php echo htmlspecialchars($schedule['end_time'] ?? 'N/A'); ?></td>
+                                                <td>
+                                                    <button class="btn btn-edit"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editModal"
+                                                            data-employee-id="<?php echo $employee['e_id']; ?>"
+                                                            data-employee-name="<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>">
+                                                        <i class="fas fa-edit me-1"></i> Edit
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-users-slash"></i>
+                                                    <p>No employees found in the system.</p>
                                                 </div>
                                             </td>
-                                            <td>
-                                                <span class="badge <?php echo $badgeClass; ?>">
-                                                    <?php echo ucfirst(htmlspecialchars($schedule['shift_type'] ?? 'N/A')); ?> Shift
-                                                </span>
-                                            </td>
-                                            <td><?php echo htmlspecialchars($schedule['schedule_date'] ?? 'Not Scheduled'); ?></td>
-                                            <td><?php echo htmlspecialchars($schedule['start_time'] ?? 'N/A'); ?></td>
-                                            <td><?php echo htmlspecialchars($schedule['end_time'] ?? 'N/A'); ?></td>
-                                            <td>
-                                                <button class="btn btn-edit"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#editModal"
-                                                        data-employee-id="<?php echo $employee['e_id']; ?>"
-                                                        data-employee-name="<?php echo htmlspecialchars($employee['firstname'] . ' ' . $employee['lastname']); ?>">
-                                                    <i class="fas fa-edit me-1"></i> Edit
-                                                </button>
-                                            </td>
                                         </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7">
-                                            <div class="empty-state">
-                                                <i class="fas fa-users-slash"></i>
-                                                <p>No employees found in the system.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination">
-                            <li class="page-item <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
-                                    <span aria-hidden="true">&laquo;</span>
-                                </a>
-                            </li>
-                            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                <li class="page-item <?php echo $currentPage == $i ? 'active' : ''; ?>">
-                                    <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                <li class="page-item <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $currentPage - 1; ?>" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
                                 </li>
-                            <?php endfor; ?>
-                            <li class="page-item <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>" aria-label="Next">
-                                    <span aria-hidden="true">&raquo;</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+                                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                    <li class="page-item <?php echo $currentPage == $i ? 'active' : ''; ?>">
+                                        <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    </li>
+                                <?php endfor; ?>
+                                <li class="page-item <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $currentPage + 1; ?>" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
-            </div>
+            </main>   
         </div>
+    </div>
 
         <!-- Edit Schedule Modal -->
         <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
@@ -642,6 +632,8 @@ $result = $stmt->get_result();
 
         <!-- Bootstrap JS and Popper.js -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
+        <script src="../../js/employee.js"></script>
 
         <script>
             // Initialize Bootstrap tooltips

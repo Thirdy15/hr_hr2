@@ -97,7 +97,7 @@ $conn->close();
             --success-color: #4ade80;
             --warning-color: #fbbf24;
             --danger-color: #f87171;
-            --dark-bg: #111827;
+            --dark-bg: rgba(33, 37, 41) !important;
             --card-bg: #1f2937;
             --border-color: #374151;
             --text-primary: #f9fafb;

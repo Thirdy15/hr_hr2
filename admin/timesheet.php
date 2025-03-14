@@ -366,7 +366,7 @@ $paginatedRecords = array_slice($employeeAttendance, $startIndex, $entriesPerPag
             overflow: hidden;
         }
 
-        .badge {
+        .badgeT {
             font-size: 12px;
             font-weight: 500;
             padding: 6px 10px;
@@ -615,7 +615,7 @@ $paginatedRecords = array_slice($employeeAttendance, $startIndex, $entriesPerPag
                                                                 $statusClass = 'badge-norecord';
                                                             }
                                                             ?>
-                                                            <span class="badge <?php echo $statusClass; ?>"><?php echo $status; ?></span>
+                                                            <span class="badgeT <?php echo $statusClass; ?>"><?php echo $status; ?></span>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>

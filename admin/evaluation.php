@@ -127,16 +127,7 @@ if ($isFirstWeek) {
             <main class="bg-black">
                 <div class="container-fluid position-relative px-4">
                     <h1 class="mb-4 text-light">Evaluation</h1>
-                </div>
-                <div class="container" id="calendarContainer" 
-                tyle="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050; 
-                width: 80%; height: 80%; display: none;">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div id="calendar" class="p-2"></div>
-                        </div>
-                    </div>
-                </div>     
+                </div>   
                 <div class="container-fluid px-4">
                     <div class="row justify-content-center">
                         <!-- Finance Department Card -->

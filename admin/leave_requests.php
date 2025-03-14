@@ -311,7 +311,7 @@ $total_pending = $count_row['total'];
             --secondary-color: #10b981;
             --dark-bg: #000000;
             --darker-bg: #000000;
-            --card-bg: #121212;
+            --card-bg: rgba(33, 37, 41) !important;
             --border-color: #333333;
             --text-primary: #ffffff;
             --text-secondary: #e0e0e0;
@@ -988,9 +988,6 @@ $total_pending = $count_row['total'];
                                                         </button>
                                                         <button class="btn btn-danger btn-sm" onclick="confirmAction('deny', <?php echo $row['leave_id']; ?>)" data-bs-toggle="tooltip" title="Deny Request">
                                                             <i class="fas fa-times"></i>
-                                                        </button>
-                                                        <button class="btn btn-info btn-sm" data-bs-toggle="tooltip" title="View Details">
-                                                            <i class="fas fa-info-circle"></i>
                                                         </button>
                                                     </div>
                                                 </td>

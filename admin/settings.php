@@ -30,7 +30,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 // Fetch employee data from the database
-$employees_sql = "SELECT e_id, firstname, lastname, gender FROM employee_register";
+$employees_sql = "SELECT e_id, firstname, lastname, position, gender FROM employee_register";
 $employees_result = $conn->query($employees_sql);
 
 // Store the employee data in an array

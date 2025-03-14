@@ -100,9 +100,9 @@ while ($holiday_row = $holiday_result->fetch_assoc()) {
             --success-color: #2ecc71;
             --warning-color: #f39c12;
             --danger-color: #e74c3c;
-            --dark-bg: #121212;
-            --darker-bg: #0a0a0a;
-            --card-bg: #1e1e1e;
+            --dark-bg: rgba(33, 37, 41) !important;
+            --darker-bg: rgba(16, 17, 18) !important;
+            --card-bg: rgba(33, 37, 41) !important;
             --border-color: #333;
             --text-primary: #ffffff;
             --text-secondary: #b3b3b3;
@@ -290,7 +290,7 @@ while ($holiday_row = $holiday_result->fetch_assoc()) {
             background-color: rgba(255, 255, 255, 0.05);
         }
         
-        .badge {
+        .badgeTimesheet {
             font-size: 0.75rem;
             font-weight: 500;
             padding: 0.35rem 0.65rem;
@@ -648,7 +648,7 @@ while ($holiday_row = $holiday_result->fetch_assoc()) {
                                                         <div><?php echo htmlspecialchars(date("M j, Y", strtotime($row['end_date']))); ?></div>
                                                     </td>
                                                     <td><?php echo htmlspecialchars($row['leave_type']); ?></td>
-                                                    <td><span class="badge bg-secondary"><?php echo htmlspecialchars($leave_days); ?> day<?php echo $leave_days !== 1 ? 's' : ''; ?></span></td>
+                                                    <td><span class="badgeTimesheet bg-secondary"><?php echo htmlspecialchars($leave_days); ?> day<?php echo $leave_days !== 1 ? 's' : ''; ?></span></td>
                                                     <td>
 
 
@@ -656,19 +656,19 @@ while ($holiday_row = $holiday_result->fetch_assoc()) {
                                                             <div class="me-2">
                                                             </div>
                                                             <div>
-                                                        <?php echo htmlspecialchars($row['status']); 
+                                                        <?php 
                                                             
                                                   
                                                     
                                                     $status = $row['status'];
                                                     if ($status === 'Approved') {
-                                                        echo '<span class="badge badge-approved">Approved</span>';
+                                                        echo '<span class="badgeTimeshhet badge-approved">Approved</span>';
                                                     } elseif ($status === 'Denied') {
-                                                        echo '<span class="badge badge-denied">Denied</span>';
+                                                        echo '<span class="badgeTimesheet badge-denied">Denied</span>';
                                                     } elseif ($status === 'Pending') {
-                                                        echo '<span class="badge badge-pending">Pending</span>';
+                                                        echo '<span class="badgeTimesheet badge-pending">Pending</span>';
                                                     } elseif ($status === 'Supervisor Approved') {
-                                                        echo '<span class="badge badge-supervisor">Supervisor Approved</span>'; 
+                                                        echo '<span class="badgeTimesheet badge-supervisor">Supervisor Approved</span>'; 
                                                     }
                                                     ?>
                                                 </td>

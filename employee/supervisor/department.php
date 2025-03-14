@@ -97,6 +97,8 @@ $conn->close();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     <link href='../../css/styles.css' rel='stylesheet' />
+    <link href='../../css/calendar.css' rel='stylesheet' />
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -108,8 +110,9 @@ $conn->close();
             --success-color: #4ade80;
             --warning-color: #fbbf24;
             --danger-color: #f87171;
-            --dark-bg: #111827;
-            --card-bg: #1f2937;
+            --bs-bg-black: rgba(16, 17 ,18) !important;
+            --bg-dark: rgba(33, 37, 41) !important;
+            --card-bg:  rgba(33, 37, 41) !important;
             --border-color: #374151;
             --text-primary: #f9fafb;
             --text-secondary: #d1d5db;
@@ -118,7 +121,7 @@ $conn->close();
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--dark-bg);
+            background-color: var(--bg-dark);
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
@@ -415,7 +418,7 @@ $conn->close();
             cursor: pointer;
             width: 40px;
             height: 40px;
-            background-color: var(--dark-bg);
+            background-color: var(--bg-dark);
             border-radius: 5px;
             display: flex;
             align-items: center;
@@ -558,7 +561,7 @@ $conn->close();
         .progress-bar-container {
             flex: 1;
             height: 8px;
-            background-color: var(--dark-bg);
+            background-color: var(--bg-dark);
             border-radius: 4px;
             overflow: hidden;
             width: 200px;
@@ -572,13 +575,22 @@ $conn->close();
         }
     </style>
 </head>
-<body class="sb-nav-fixed">
+<body class="sb-nav-fixed bg-black">
     <?php include 'navbar.php'; ?>
     <div id="layoutSidenav">
         <?php include 'sidebar.php'; ?>
         <div id="layoutSidenav_content">
-        <?php include 'sidebar.php'; ?>
-            <main class="bg-black">
+            <?php include 'sidebar.php'; ?>
+            <main>
+                <div class="container" id="calendarContainer" 
+                    style="position: fixed; top: 9%; right: 0; z-index: 1050; 
+                    width: 700px; display: none;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="calendar" class="p-2"></div>
+                        </div>
+                    </div>
+                </div>
                 <div class="page-container">
                     <div class="page-header">
                         <h1 class="page-title">Employee Evaluation</h1>
@@ -697,6 +709,7 @@ $conn->close();
                     </div>
                 </div>
             </main>
+            <?php include 'footer.php'; ?>
         </div>
     </div>
     <script>
@@ -935,7 +948,9 @@ $conn->close();
 
     <!-- SweetAlert2 for better alerts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'> </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../js/employee.js"></script>
 </body>
 
 </html>
